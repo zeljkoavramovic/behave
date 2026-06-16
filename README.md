@@ -4,27 +4,23 @@
 
 One file. Zero dependencies. Discipline every AI coding session.
 
-
-
 ## Overview
 
-The global `CLAUDE.md` that makes AI coding assistants actually behave, so every coding session becomes more disciplined, more predictable, and more productive.
+A global `CLAUDE.md` that makes AI coding assistants actually behave, so every coding session becomes more disciplined, more predictable, and more productive.
 
-Works natively with **Claude Code** and **OpenCode**. For other agent tools, you can reuse the same framework through their preferred instruction file convention, such as `AGENTS.md` or `GEMINI.md`. No setup. No dependencies. One file.
+It works natively with **Claude Code** and **OpenCode**. For other agent tools, reuse the same framework through their preferred instruction file convention, such as `AGENTS.md` or `GEMINI.md`. No setup, no dependencies, one file.
 
-Heavily inspired by **[Andrej Karpathy's](https://x.com/karpathy/status/2015883857489522876)** observations on LLM coding pitfalls (**[Multica adaptation](https://github.com/multica-ai/andrej-karpathy-skills)**), and by **[David Scott Bernstein's](https://github.com/ThePassionateProgrammer/knowledge-base-starter)** partnership-driven working-agreement style. Then significantly extended, systematized, and refined for real-world use.
+The ideas come from **[Andrej Karpathy's](https://x.com/karpathy/status/2015883857489522876)** observations on LLM coding pitfalls (**[Multica adaptation](https://github.com/multica-ai/andrej-karpathy-skills)**), and from **[David Scott Bernstein's](https://github.com/ThePassionateProgrammer/knowledge-base-starter)** partnership-driven working-agreement style. From there it grew into something more systematic, tuned for real projects.
 
 There is also a **[single-page walkthrough](https://zeljkoavramovic.github.io/karpathy-bernstein-avramovic/)** - with visual diagrams, side navigation, before/after comparison, feature comparison table, FAQ accordion, and one-click install commands.
 
-
-
-## The Problem It Solves
+## The problem it solves
 
 AI coding assistants, left unchecked, tend to:
 
 - Start coding before clarifying ambiguous requirements
 - Add unrequested features, abstractions, and "improvements"
-- Expand scope mid-task - refactor while fixing, "improve" while adding
+- Expand scope mid-task, refactor while fixing or "improve" while adding
 - Silently rename files, change APIs, or rewrite working code
 - Skip verification until after the mistake is already in the diff
 - Suppress errors without telling you
@@ -35,74 +31,70 @@ AI coding assistants, left unchecked, tend to:
 
 This file encodes behavioral contracts that prevent all of these before they happen.
 
+## Key features
 
+### Four core coding principles
 
-## Key Features
+The framework rests on four disciplines: think before coding, prefer simplicity, make surgical changes, and define success through verification. Everything else builds on these four.
 
-### Four Core Coding Principles
+### Collaborative working model
 
-The framework is built around four foundational disciplines: think before coding, prefer simplicity, make surgical changes, and define success through verification. These principles form the backbone that everything else builds on.
+The human brings domain knowledge and architectural intent. The AI brings speed, pattern recognition, critique, and exploration. The AI is expected to refine ideas collaboratively and wait for an explicit boundary before building.
 
-### Collaborative Working Model
-
-The file defines a clear human/AI partnership: the human brings domain knowledge and architectural intent, while the AI contributes speed, pattern recognition, critique, and exploration. The AI is expected to refine ideas collaboratively and wait for an explicit boundary before building.
-
-### Order of Precedence
+### Order of precedence
 
 When rules conflict, the AI knows exactly which wins. Hard stops override everything unless explicitly authorized, then explicit instruction overrides defaults, then correctness and safety override elegance or speed.
 
-### Three Named Operating Modes
+### Three named operating modes
 
-- **default mode** - make the smallest correct change that satisfies the request
-- **ambiguity mode** - stop and ask when uncertainty affects behavior, interfaces, data, safety, or irreversible work
-- **cleanup mode** - broader simplification and deletion are allowed only when explicitly requested
+- **default mode**: make the smallest correct change that satisfies the request
+- **ambiguity mode**: stop and ask when uncertainty affects behavior, interfaces, data, safety, or irreversible work
+- **cleanup mode**: broader simplification and deletion are allowed only when explicitly requested
 
-This gives the AI an explicit operating model instead of leaving behavior to chance.
+That gives the AI an operating model instead of leaving behavior to chance.
 
-### Wording Conventions (Must / Should / May)
+### Wording conventions (Must / Should / May)
 
 RFC-style rule weight removes ambiguity. `Must/Never` means mandatory, `Should/Prefer` means strong default, and `May` means optional.
 
-### Shared Vocabulary / Interpretation Layer
+### Shared vocabulary / interpretation layer
 
 The file defines terms like *trivial task*, *minor ambiguity*, *harmful pattern*, and *working code* so the user and the AI share vocabulary from the start.
 
-### Scope Control for Existing Code
+### Scope control for existing code
 
-This is one of the most practical protections in the file. It prevents the AI from touching adjacent code, silently expanding scope, rewriting working systems, or using cleanup as an excuse to change unrelated areas.
+This is the most practical protection in the file. It prevents the AI from touching adjacent code, silently expanding scope, rewriting working systems, or using cleanup as an excuse to change unrelated areas.
 
-### Hard Stops with Rule Citation and Authorization Gate
+### Hard stops with rule citation and authorization gate
 
-When the AI cannot proceed, it does not just stop - it explains **which rule** caused the stop, creating an audit trail around dangerous actions such as destructive CLI commands, secret modification, silent signature changes, swallowed errors, or incomplete delivery. When a hard stop applies, it says so explicitly, states which rule triggers it, and does not proceed until you authorize an exception.
+When the AI cannot proceed, it does not just stop. It explains which rule caused the stop, so there is an audit trail around dangerous actions like destructive CLI commands, secret modification, silent signature changes, swallowed errors, or incomplete delivery. When a hard stop applies, it says so explicitly, states which rule triggers it, and does not proceed until you authorize an exception.
 
-### Verification by Task Type with Manual Fallback
+### Verification by task type with manual fallback
 
 Different work requires different proof:
 
-- **Bug fix** → reproduce the failing case, then make it pass
-- **New feature** → verify the public interface, not internals
-- **Refactor** → verify observable behavior before and after
-- **No automated tests** → define manual verification steps explicitly before proceeding
+- **Bug fix**: reproduce the failing case, then make it pass
+- **New feature**: verify the public interface, not internals
+- **Refactor**: verify observable behavior before and after
+- **No automated tests**: define manual verification steps explicitly before proceeding
 
-### Broken Baseline Handling
+### Broken baseline handling
 
-If the baseline is already broken, the AI must say so before making changes, define success relative to the existing state, and avoid pretending the entire system is verified when unrelated failures remain.
+If the baseline is already broken, the AI must say so before making changes, define success relative to the existing state, and avoid pretending the whole system is verified when unrelated failures remain.
 
-### Structured Post-Task Report
+### Structured post-task report
 
-After any non-trivial task, the AI should report:
+After any non-trivial task, the AI reports:
 - What changed
 - What was verified
 - What remains unverified
 - Problems noticed but intentionally left untouched
 
-### Documentation Philosophy and Rules
+### Documentation philosophy and rules
 
-The file treats documentation with the same discipline as code: explain the **why**, update docs when behavior changes, and avoid comments that merely repeat the code or rot faster than the implementation.
+Documentation gets the same discipline as code. Explain the why. Update docs when behavior changes. Skip comments that just repeat the code, because they rot faster than the code they describe.
 
-
-
-## Fully Agnostic By Design
+## Fully agnostic by design
 
 This file works regardless of your:
 
@@ -117,11 +109,9 @@ This file works regardless of your:
 | Project type | ✅ New projects, legacy code, refactors |
 | Verification method | ✅ Automated tests, manual validation, reproducible checks, baseline comparison |
 
-Add project-specific stack details in a **project-level** instruction file. Keep the global file universal.
+Put project-specific stack details in a project-level instruction file. Keep the global file universal.
 
-
-
-## How It Comes Together
+## How it comes together
 
 ```mermaid
 flowchart TB
@@ -158,15 +148,13 @@ for safer, smaller, verifiable AI coding changes"]
     A --> C
 ```
 
-
-
-## How It Differs From the Originals
+## How it differs from the originals
 
 | Feature | Karpathy | Bernstein | This repo |
 |---|---|---|---|
 | Core coding rules | ✅ | partial | ✅ inherited + refined |
 | Collaborative partnership framing | ❌ | ✅ | ✅ inherited + refined |
-| Order of Precedence | ❌ | ❌ | ✅ new |
+| Order of precedence | ❌ | ❌ | ✅ new |
 | Operating modes | ❌ | ❌ | ✅ new |
 | Must/Should/May wording conventions | ❌ | ❌ | ✅ new |
 | Shared vocabulary / interpretation layer | ❌ | ❌ | ✅ new |
@@ -179,8 +167,6 @@ for safer, smaller, verifiable AI coding changes"]
 | Structured post-task reporting | ❌ | ❌ | ✅ new |
 | Dedicated documentation rules | ❌ | partial | ✅ formalized |
 | Full multi-dimensional agnosticism | partial | partial | ✅ made explicit |
-
-
 
 ## Installation
 
@@ -196,17 +182,13 @@ mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claud
 mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/karpathy-bernstein-avramovic/master/CLAUDE.md -o ~/.claude/CLAUDE.md
 ```
 
-If `~/.claude/CLAUDE.md` already exists, it will be backed up to `CLAUDE.backup.md` before being overwritten.
+If `~/.claude/CLAUDE.md` already exists, it is backed up to `CLAUDE.backup.md` before being overwritten.
 
-Works natively with **Claude Code** and **OpenCode**. For other AI coding tools, follow that tool's instruction file convention (e.g., `AGENTS.md`, `GEMINI.md`) - the content is the same, the filename depends on the tool.
+Works natively with **Claude Code** and **OpenCode**. For other AI coding tools, follow that tool's instruction file convention (for example `AGENTS.md` or `GEMINI.md`). The content is the same; the filename depends on the tool.
 
+## Related projects
 
-
-## Related Projects
-
-- **[Agentic Design Patterns](https://zeljkoavramovic.github.io/agentic-design-patterns/)** - Interactive tutorial covering essential patterns for building intelligent AI systems: **core patterns** (prompt chaining, routing, parallelization, tool use, code-then-execute, dynamic scaffolding), **reasoning & strategy patterns** (reflection, planning, reasoning techniques, parallel fusion, prioritization, exploration & discovery), **orchestration patterns** (multi-agent collaboration, goal setting & monitoring, inter-agent communication, awareness, resource-aware optimization), **infrastructure & state patterns** (memory management, learning and adaptation, model context protocol, knowledge retrieval/RAG, evaluation & monitoring, session isolation), and **reliability & control patterns** (the stop hook, exception handling & recovery, human-in-the-loop, the Ralph Wiggum loop, guardrails & safety, spec-first agent). Each pattern includes a description, diagram, when-to-use guidance, where it fits in the bigger picture, pros/cons, and real-world examples. There is also a visual relationship diagram showing how patterns interconnect.
-
-
+- **[Agentic Design Patterns](https://zeljkoavramovic.github.io/agentic-design-patterns/)**: an interactive tutorial on patterns for building intelligent AI systems. It covers core patterns (prompt chaining, routing, parallelization, tool use, code-then-execute, dynamic scaffolding), reasoning and strategy patterns (reflection, planning, reasoning techniques, parallel fusion, prioritization, exploration and discovery), orchestration patterns (multi-agent collaboration, goal setting and monitoring, inter-agent communication, awareness, resource-aware optimization), infrastructure and state patterns (memory management, learning and adaptation, model context protocol, knowledge retrieval and RAG, evaluation and monitoring, session isolation), and reliability and control patterns (the stop hook, exception handling and recovery, human-in-the-loop, the Ralph Wiggum loop, guardrails and safety, spec-first agent). Each pattern comes with a description, diagram, when-to-use guidance, where it fits in the bigger picture, pros and cons, and real-world examples. A visual relationship diagram shows how the patterns interconnect.
 
 ## Credits
 
@@ -217,9 +199,9 @@ Works natively with **Claude Code** and **OpenCode**. For other AI coding tools,
 
 
 
-## Support the Project
+## Support the project
 
-If this saved you time, frustration, or a bad deployment, support is most welcome:
+If this saved you time, frustration, or a bad deployment, support is welcome:
 
 - ⭐ **Star the repository**
 - 💬 **Share the repository**
@@ -229,8 +211,6 @@ If this saved you time, frustration, or a bad deployment, support is most welcom
           alt="Buy Me A Coffee"
           style="height: 35px !important; width: 150px !important;" />
    </a>
-
-
 
 ## License
 
