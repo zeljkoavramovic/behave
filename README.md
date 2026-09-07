@@ -170,16 +170,44 @@ for safer, smaller, verifiable AI coding changes"]
 
 ## Installation
 
+### Installer (recommended)
+
 **Windows (PowerShell):**
 
 ```powershell
-mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/CLAUDE.md" -OutFile "$HOME\.claude\CLAUDE.md"
+iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py" -OutFile install.py; python install.py
 ```
 
 **Linux / macOS:**
 
 ```bash
-mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/CLAUDE.md -o ~/.claude/CLAUDE.md
+curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py -o install.py && python3 install.py
+```
+
+Use `python`, `python3`, or `py` per your platform (on Windows, `py install.py` also works). No registry, no account, no npm - one Python script, standard library only.
+
+The installer asks where the rules should apply (all your projects or just this one), detects installed agents (Claude Code, OpenCode, Codex, Cursor, Devin, Gemini CLI, and GitHub Copilot in v1), shows exactly what will change, and asks before writing. Update = re-run. Uninstall = `python install.py --remove`. For headless or CI use, see `python install.py --help`.
+
+The repo distributes `BEHAVE.md`. When copying manually into an agent, the filename matters: Claude Code reads `CLAUDE.md`, Gemini CLI reads `GEMINI.md`, most other tools read `AGENTS.md`. The installer handles the naming automatically; manual users must rename.
+
+Cross-agent bonus: Devin and VS Code GitHub Copilot also read `~/.claude/CLAUDE.md` and `~/.claude/rules/`, so a Claude Code install reaches those agents for free.
+
+One watch-list item: Gemini CLI does not read `AGENTS.md` by default today (tracked in [google-gemini/gemini-cli issue #28227](https://github.com/google-gemini/gemini-cli/issues/28227)). If Google ships default `AGENTS.md` loading, gemini-cli joins the shared `AGENTS.md` family and the installer will treat it like Codex, OpenCode, Pi, and Devin.
+
+### Manual install
+
+Copy the file directly, no Python needed.
+
+**Windows (PowerShell):**
+
+```powershell
+mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md" -OutFile "$HOME\.claude\CLAUDE.md"
+```
+
+**Linux / macOS:**
+
+```bash
+mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o ~/.claude/CLAUDE.md
 ```
 
 If `~/.claude/CLAUDE.md` already exists, it is backed up to `CLAUDE.backup.md` before being overwritten.

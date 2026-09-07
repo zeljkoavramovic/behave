@@ -413,6 +413,16 @@
       background: rgba(0,0,0,0.08);
     }
 
+    .install-label.manual-label {
+      margin-top: 16px;
+    }
+
+    .install-readme {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
     .tab-bar {
       display: flex;
       border-bottom: 1px solid var(--border);
@@ -1173,7 +1183,7 @@
             </a>
           </div>
           <div class="install-block" id="install">
-            <div class="install-label">Install in 30 seconds<span class="install-note"> (existing file backed up to <code>CLAUDE.backup.md</code>)</span></div>
+            <div class="install-label">Install in 30 seconds<span class="install-note"> (recommended installer)</span></div>
             <div class="tab-bar">
               <button class="tab-btn active" data-tab="powershell" aria-pressed="true">Windows (PowerShell)</button>
               <button class="tab-btn" data-tab="bash" aria-pressed="false">Linux / macOS</button>
@@ -1183,9 +1193,23 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 <span>Copy</span>
               </button>
-              <code id="install-ps">mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/CLAUDE.md" -OutFile "$HOME\.claude\CLAUDE.md"</code>
-              <code id="install-bash" style="display:none">mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/CLAUDE.md -o ~/.claude/CLAUDE.md</code>
+              <code data-code="ps">iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py" -OutFile install.py; python install.py</code>
+              <code data-code="bash" style="display:none">curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py -o install.py && python3 install.py</code>
             </div>
+            <div class="install-label manual-label">Manual install<span class="install-note"> (no Python needed; existing file backed up to <code>CLAUDE.backup.md</code>)</span></div>
+            <div class="tab-bar">
+              <button class="tab-btn active" data-tab="powershell" aria-pressed="true">Windows (PowerShell)</button>
+              <button class="tab-btn" data-tab="bash" aria-pressed="false">Linux / macOS</button>
+            </div>
+            <div class="code-box">
+              <button class="copy-btn" aria-label="Copy manual install command">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span>Copy</span>
+              </button>
+              <code data-code="ps">mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md" -OutFile "$HOME\.claude\CLAUDE.md"</code>
+              <code data-code="bash" style="display:none">mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o ~/.claude/CLAUDE.md</code>
+            </div>
+            <p class="install-readme">More options in the <a href="https://github.com/zeljkoavramovic/behave#installation" target="_blank" rel="noopener">README installation section</a></p>
           </div>
         </div>
 
@@ -1884,52 +1908,56 @@
       });
     })();
 
-    // Tab toggle for install commands
+    // Tab toggle for install commands (scoped per tab bar)
     (function() {
-      var tabs = document.querySelectorAll('.tab-btn');
-      var psCode = document.getElementById('install-ps');
-      var bashCode = document.getElementById('install-bash');
+      document.querySelectorAll('.tab-bar').forEach(function(bar) {
+        var codeBox = bar.nextElementSibling;
+        if (!codeBox || !codeBox.classList.contains('code-box')) return;
+        var psCode = codeBox.querySelector('[data-code="ps"]');
+        var bashCode = codeBox.querySelector('[data-code="bash"]');
+        if (!psCode || !bashCode) return;
 
-      tabs.forEach(function(tab) {
-        tab.addEventListener('click', function() {
-          tabs.forEach(function(t) {
-            t.classList.remove('active');
-            t.setAttribute('aria-pressed', 'false');
+        bar.querySelectorAll('.tab-btn').forEach(function(tab) {
+          tab.addEventListener('click', function() {
+            bar.querySelectorAll('.tab-btn').forEach(function(t) {
+              t.classList.remove('active');
+              t.setAttribute('aria-pressed', 'false');
+            });
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+
+            if (this.dataset.tab === 'bash') {
+              psCode.style.display = 'none';
+              bashCode.style.display = 'block';
+            } else {
+              psCode.style.display = 'block';
+              bashCode.style.display = 'none';
+            }
           });
-          this.classList.add('active');
-          this.setAttribute('aria-pressed', 'true');
-
-          if (this.dataset.tab === 'bash') {
-            psCode.style.display = 'none';
-            bashCode.style.display = 'block';
-          } else {
-            psCode.style.display = 'block';
-            bashCode.style.display = 'none';
-          }
         });
       });
     })();
 
-    // Copy button
+    // Copy button (one per code box)
     (function() {
-      var copyBtn = document.querySelector('.copy-btn');
-      if (!copyBtn) return;
+      document.querySelectorAll('.copy-btn').forEach(function(copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          var codeBox = copyBtn.closest('.code-box');
+          var psCode = codeBox.querySelector('[data-code="ps"]');
+          var bashCode = codeBox.querySelector('[data-code="bash"]');
+          var activeCode = psCode.style.display !== 'none' ? psCode : bashCode;
+          var text = activeCode.textContent;
 
-      copyBtn.addEventListener('click', function() {
-        var psCode = document.getElementById('install-ps');
-        var bashCode = document.getElementById('install-bash');
-        var activeCode = psCode.style.display !== 'none' ? psCode : bashCode;
-        var text = activeCode.textContent;
-
-        navigator.clipboard.writeText(text).then(function() {
-          copyBtn.classList.add('copied');
-          var span = copyBtn.querySelector('span');
-          var origText = span.textContent;
-          span.textContent = 'Copied';
-          setTimeout(function() {
-            copyBtn.classList.remove('copied');
-            span.textContent = origText;
-          }, 2000);
+          navigator.clipboard.writeText(text).then(function() {
+            copyBtn.classList.add('copied');
+            var span = copyBtn.querySelector('span');
+            var origText = span.textContent;
+            span.textContent = 'Copied';
+            setTimeout(function() {
+              copyBtn.classList.remove('copied');
+              span.textContent = origText;
+            }, 2000);
+          });
         });
       });
     })();

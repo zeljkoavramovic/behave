@@ -3,3 +3,8 @@ doc/
 *.zip
 *.7z
 *.bat
+INSTALLER-PLAN.md
+PROMOTION.md
+STEPS.md
+__pycache__/
+.pytest_cache/
