@@ -1,6 +1,6 @@
 # CLAUDE.md That Works
 
-[![Website](https://img.shields.io/website?url=https%3A%2F%2Fzeljkoavramovic.github.io%2Fkarpathy-bernstein-avramovic%2F&label=landing%20page)](https://zeljkoavramovic.github.io/karpathy-bernstein-avramovic/)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fzeljkoavramovic.github.io%2Fbehave%2F&label=landing%20page)](https://zeljkoavramovic.github.io/behave/)
 
 One file. Zero dependencies. Discipline every AI coding session.
 
@@ -12,7 +12,7 @@ It works natively with **Claude Code** and **OpenCode**. For other agent tools, 
 
 The ideas come from **[Andrej Karpathy's](https://x.com/karpathy/status/2015883857489522876)** observations on LLM coding pitfalls (**[Multica adaptation](https://github.com/multica-ai/andrej-karpathy-skills)**), and from **[David Scott Bernstein's](https://github.com/ThePassionateProgrammer/knowledge-base-starter)** partnership-driven working-agreement style. From there it grew into something more systematic, tuned for real projects.
 
-There is also a **[single-page walkthrough](https://zeljkoavramovic.github.io/karpathy-bernstein-avramovic/)** - with visual diagrams, side navigation, before/after comparison, feature comparison table, FAQ accordion, and one-click install commands.
+There is also a **[single-page walkthrough](https://zeljkoavramovic.github.io/behave/)** - with visual diagrams, side navigation, before/after comparison, feature comparison table, FAQ accordion, and one-click install commands.
 
 ## The problem it solves
 
@@ -173,13 +173,13 @@ for safer, smaller, verifiable AI coding changes"]
 **Windows (PowerShell):**
 
 ```powershell
-mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/karpathy-bernstein-avramovic/master/CLAUDE.md" -OutFile "$HOME\.claude\CLAUDE.md"
+mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/CLAUDE.md" -OutFile "$HOME\.claude\CLAUDE.md"
 ```
 
 **Linux / macOS:**
 
 ```bash
-mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/karpathy-bernstein-avramovic/master/CLAUDE.md -o ~/.claude/CLAUDE.md
+mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/CLAUDE.md -o ~/.claude/CLAUDE.md
 ```
 
 If `~/.claude/CLAUDE.md` already exists, it is backed up to `CLAUDE.backup.md` before being overwritten.
