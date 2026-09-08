@@ -113,7 +113,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 3, "flags": ()},
     {"id": "continue", "env": None, "markers": [("c", ".continue"), ("h", ".continue")], "tier": 3, "flags": ("cwd",)},
     {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")], "tier": 3, "flags": ()},
-    {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 2, "flags": ()},
+    {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 1, "flags": ()},
     {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
     {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
     {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
@@ -181,13 +181,14 @@ ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
-    "roo", "augment", "kilo", "droid", "deepagents", "cline",
+    "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
-              "roo", "augment", "kilo", "droid", "deepagents", "cline"]
+              "roo", "augment", "kilo", "droid", "deepagents", "cline",
+              "crush"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -204,6 +205,7 @@ DISPLAY = {
     "droid": "Droid",
     "deepagents": "Deep Agents",
     "cline": "Cline",
+    "crush": "Crush",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -828,6 +830,15 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["cline"], home_base() / ".cline" / "rules" /
                     "behave.md", "drop", drop_agent="cline"))
+            elif a == "crush":
+                # CRUSH.md is the user's own cross-project instructions
+                # file (like GEMINI.md): inline block at the top so
+                # existing content survives - never a whole-file drop.
+                # crush loads <config>/crush/CRUSH.md by default, where
+                # config = $XDG_CONFIG_HOME or ~/.config on ALL platforms.
+                targets.append(_mk_target(
+                    ["crush"], xdg_base() / "crush" / "CRUSH.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1024,6 +1035,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["deepagents"])
         add(home_base() / ".cline" / "rules" / "behave.md", "drop",
             ["cline"], drop_agent="cline")
+        add(xdg_base() / "crush" / "CRUSH.md", "inline", ["crush"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
