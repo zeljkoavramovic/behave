@@ -585,23 +585,6 @@ def remove_inline(path, block_id):
     return "stripped"
 
 
-def block_content_sha_short(path, block_id):
-    """Short sha256 of a marked block's body (for the stale hint)."""
-    bid = re.escape(block_id.encode("ascii"))
-    pat = re.compile(
-        b"<!-- BEGIN " + bid + b" [^\r\n]*-->\r?\n(.*?)<!-- END " + bid + b" -->",
-        re.DOTALL,
-    )
-    try:
-        raw = path.read_bytes()
-    except OSError:
-        return "?"
-    m = pat.search(raw)
-    if not m:
-        return "?"
-    return hashlib.sha256(m.group(1)).hexdigest()[:7]
-
-
 # ---------------------------------------------------------------------------
 # Drop engine (P2.5)
 # ---------------------------------------------------------------------------
@@ -644,8 +627,9 @@ def cursor_user_warning():
 # ---------------------------------------------------------------------------
 
 
-def write_copy(dest_dir, source):
-    """Writes BEHAVE.md; provenance guard; returns 'created'|'updated'."""
+def write_copy(dest_dir, source, confirm=None):
+    """Writes BEHAVE.md; provenance guard (confirm() may allow a drift
+    overwrite; no callback = always refuse); returns 'created'|'updated'."""
     dest = dest_dir / "BEHAVE.md"
     existed = dest.exists()
     if existed:
@@ -654,9 +638,13 @@ def write_copy(dest_dir, source):
         except OSError as exc:
             raise TargetError("cannot read %s: %s" % (dest, exc))
         if hashlib.sha256(cur).hexdigest() != source.sha256:
-            raise TargetError(
-                "existing BEHAVE.md does not match the source; "
-                "rename it or pass --source")
+            if confirm is None:
+                raise TargetError(
+                    "existing BEHAVE.md does not match the source; "
+                    "rename it or pass --source")
+            if not confirm():
+                raise TargetError(
+                    "existing BEHAVE.md differs from the source; kept")
     try:
         atomic_write(dest, source.data)
     except OSError as exc:
@@ -906,9 +894,7 @@ def stale_hint(written_paths, project_dir, block_id):
     for f in findings:
         if f["path"] in written_paths:
             continue
-        short = block_content_sha_short(f["path"], block_id)
-        say("also found: %s (sha %s); run --remove to clean"
-            % (f["path"], short))
+        say("also found: %s; run --remove to clean" % (f["path"],))
         count += 1
         if count >= 5:
             break
@@ -1747,7 +1733,12 @@ def _tui_project(args, reader, source, pre_variant):
                                   project_dir)
     for t in copy_targets:
         try:
-            status = write_copy(project_dir, source)
+            status = write_copy(
+                project_dir, source,
+                confirm=lambda: _confirm(
+                    reader, args.yes,
+                    "existing BEHAVE.md differs from the source; "
+                    "overwrite? [y/N] "))
             print("  ok    plain copy %s (%s)" % (t["path"], status))
             print("  Plain copies are yours: not tracked by --remove.")
             results.append({"agent": "", "target": t["path"].as_posix(),

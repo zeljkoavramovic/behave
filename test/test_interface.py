@@ -133,3 +133,22 @@ def test_22_provenance_guard(run, env_for, proj, src_file, tmp_path):
               str(src_file)], env=env_for(h2))
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert (proj / "BEHAVE.md").read_bytes() == src_file.read_bytes()
+
+
+# Test 23: TUI plain copy over a drifted BEHAVE.md -> y overwrites after
+#          confirm, n keeps the file (headless guard is test 22)
+def test_23_tui_copy_confirm(run, env_for, fake_home, proj, src_file):
+    (proj / "BEHAVE.md").write_bytes(b"CUSTOM LOCAL RULES\n")
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=proj, input_text="p\nj\ny\ny\n")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "differs from the source" in r.stdout
+    assert "overwrite? [y/N]" in r.stdout
+    assert (proj / "BEHAVE.md").read_bytes() == src_file.read_bytes()
+
+    (proj / "BEHAVE.md").write_bytes(b"CUSTOM LOCAL RULES\n")
+    r2 = run(["--interactive", "--source", str(src_file)],
+             env=env_for(fake_home), cwd=proj, input_text="p\nj\ny\nn\n")
+    assert r2.returncode == 4, r2.stdout + r2.stderr
+    assert "kept" in (r2.stdout + r2.stderr)
+    assert (proj / "BEHAVE.md").read_bytes() == b"CUSTOM LOCAL RULES\n"
