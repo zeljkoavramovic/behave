@@ -121,7 +121,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
 
     r2 = run(["--remove", "--project-dir", str(proj), "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
-    assert "codex,opencode,pi,devin,cursor" in r2.stdout
+    assert "codex,opencode,pi,omp,devin,cursor" in r2.stdout
     assert not (proj / "AGENTS.md").exists()
 
     run(["--agent", "codex,opencode,pi,devin", "--scope", "project",
@@ -131,7 +131,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
              env=env)
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
-    assert "codex,opencode,pi,devin,cursor" in agents
+    assert "codex,opencode,pi,omp,devin,cursor" in agents
 
 
 # Test 12: stale-block hint printed when a second marked block exists

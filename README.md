@@ -186,13 +186,13 @@ curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/insta
 
 Use `python`, `python3`, or `py` per your platform (on Windows, `py install.py` also works). No registry, no account, no npm - one Python script, standard library only.
 
-The installer asks where the rules should apply (all your projects or just this one), detects installed agents (Claude Code, OpenCode, Codex, Cursor, Devin, Gemini CLI, and GitHub Copilot in v1), shows exactly what will change, and asks before writing. Update = re-run. Uninstall = `python install.py --remove`. For headless or CI use, see `python install.py --help`.
+The installer asks where the rules should apply (all your projects or just this one), detects installed agents (Claude Code, OpenCode, Codex, Cursor, Devin, Gemini CLI, GitHub Copilot, Pi, and Oh My Pi), shows exactly what will change, and asks before writing. Update = re-run. Uninstall = `python install.py --remove`. For headless or CI use, see `python install.py --help`.
 
 The repo distributes `BEHAVE.md`. When copying manually into an agent, the filename matters: Claude Code reads `CLAUDE.md`, Gemini CLI reads `GEMINI.md`, most other tools read `AGENTS.md`. The installer handles the naming automatically; manual users must rename.
 
-Cross-agent bonus: Devin and VS Code GitHub Copilot also read `~/.claude/CLAUDE.md` and `~/.claude/rules/`, so a Claude Code install reaches those agents for free.
+Cross-agent bonus: Devin and VS Code GitHub Copilot also read `~/.claude/CLAUDE.md` and `~/.claude/rules/`, so a Claude Code install reaches those agents for free. Oh My Pi (omp), Pi's maintained successor, keeps its own config root - `~/.omp/agent/AGENTS.md` - and does not read OpenCode's global file by default, so the installer gives it a dedicated target.
 
-One watch-list item: Gemini CLI does not read `AGENTS.md` by default today (tracked in [google-gemini/gemini-cli issue #28227](https://github.com/google-gemini/gemini-cli/issues/28227)). If Google ships default `AGENTS.md` loading, gemini-cli joins the shared `AGENTS.md` family and the installer will treat it like Codex, OpenCode, Pi, and Devin.
+One watch-list item: Gemini CLI does not read `AGENTS.md` by default today (tracked in [google-gemini/gemini-cli issue #28227](https://github.com/google-gemini/gemini-cli/issues/28227)). If Google ships default `AGENTS.md` loading, gemini-cli joins the shared `AGENTS.md` family and the installer will treat it like Codex, OpenCode, Pi, Oh My Pi, and Devin.
 
 ### Manual install
 

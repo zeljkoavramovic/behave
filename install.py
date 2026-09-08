@@ -143,6 +143,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 3, "flags": ()},
     {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
     {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
+    {"id": "omp", "env": None, "markers": [("h", ".omp/agent")], "tier": 1, "flags": ()},
     {"id": "opencode", "env": None, "markers": [("x", "opencode")], "tier": 1, "flags": ()},
     {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 2, "flags": ()},
     {"id": "ona", "env": None, "markers": [("h", ".ona")], "tier": 2, "flags": ()},
@@ -176,18 +177,19 @@ AGENTS: List[Dict[str, Any]] = [
 AGENT_BY_ID = dict((a["id"], a) for a in AGENTS)
 ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 
-# Tier-1 install targets (INSTALLER-PLAN section 6): the 8 v1 agents.
+# Tier-1 install targets (INSTALLER-PLAN section 6): the 9 v1 agents.
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
-    "gemini-cli", "github-copilot", "pi",
+    "gemini-cli", "github-copilot", "pi", "omp",
 ]
 TIER1_SET = set(TIER1_ORDER)
-FAMILY_IDS = ["codex", "opencode", "pi", "devin", "cursor"]  # shared ./AGENTS.md block
+FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor"]  # shared ./AGENTS.md block
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
     "opencode": "OpenCode",
     "pi": "Pi",
+    "omp": "Oh My Pi",
     "devin": "Devin",
     "cursor": "Cursor",
     "gemini-cli": "Gemini CLI",
@@ -748,6 +750,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["pi"], home_base() / ".pi" / "agent" / "AGENTS.md",
                     "inline"))
+            elif a == "omp":
+                targets.append(_mk_target(
+                    ["omp"], home_base() / ".omp" / "agent" / "AGENTS.md",
+                    "inline"))
             elif a == "devin":
                 for d in devin_dirs():
                     targets.append(_mk_target(
@@ -877,9 +883,9 @@ def restart_hints(agents):
     if "claude-code" in agents:
         lines.append("  - Claude Code: start a new session; verify via "
                      "/context (Memory files).")
-    if [a for a in ("codex", "opencode", "pi", "devin") if a in agents]:
-        lines.append("  - Codex / OpenCode / Pi / Devin: restart them "
-                     "(Codex rebuilds its chain every run).")
+    if [a for a in ("codex", "opencode", "pi", "omp", "devin") if a in agents]:
+        lines.append("  - Codex / OpenCode / Pi / Oh My Pi / Devin: restart "
+                     "them (Codex rebuilds its chain every run).")
     if "cursor" in agents:
         lines.append("  - Cursor: restart the app (rules apply to Agent/Chat).")
     if "gemini-cli" in agents:
@@ -941,6 +947,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(codex_dir() / "AGENTS.md", "inline", ["codex"])
         add(xdg_base() / "opencode" / "AGENTS.md", "inline", ["opencode"])
         add(home_base() / ".pi" / "agent" / "AGENTS.md", "inline", ["pi"])
+        add(home_base() / ".omp" / "agent" / "AGENTS.md", "inline", ["omp"])
         for d in devin_dirs():
             add(d / "AGENTS.md", "inline", ["devin"])
         add(home_base() / ".cursor" / "rules" / "behave.mdc", "drop",

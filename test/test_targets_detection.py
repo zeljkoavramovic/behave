@@ -143,7 +143,7 @@ def test_15_detection(run, env_for, fake_home, tmp_path):
     assert "kimi-code-cli" in ids
     assert "windsurf" in ids
     assert "deprecated" in r.stdout
-    assert "All known ids (77):" in r.stdout
+    assert "All known ids (78):" in r.stdout
 
     h2 = tmp_path / "h2"
     h2.mkdir()
