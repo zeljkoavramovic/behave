@@ -1,16 +1,53 @@
 """Plan section 9, tests 17-22: interface (CLI, TUI, json, exit codes)."""
 
 import hashlib
+import http.server
 import json
 import subprocess
 import sys
+import threading
 from pathlib import Path
+
+import pytest
 
 INSTALL_PY = Path(__file__).resolve().parent.parent / "install.py"
 
 B = b"<!-- BEGIN behave - installed by install.py; --remove uninstalls -->\n"
 MARKER = (b"<!-- installed by install.py (behave); "
           b"--remove deletes this file -->\n")
+
+URL_RULES_BODY = b"# RULES\nrules fetched over localhost http\n"
+
+
+@pytest.fixture
+def url_rules(tmp_path):
+    """P5.1: localhost HTTP server serving one rules file, so URL-source
+    pin tests never touch the real network."""
+    rules = tmp_path / "rules.md"
+    rules.write_bytes(URL_RULES_BODY)
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.lstrip("/") == "rules.md":
+                body = rules.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/markdown")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, format, *args):
+            pass  # keep access-log noise out of pytest output
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    yield "http://127.0.0.1:%d/rules.md" % server.server_address[1]
+    server.shutdown()
+    server.server_close()
 
 
 # Test 17: zero args + EOF stdin -> clean exit 1, no traceback, no hang
@@ -202,3 +239,49 @@ def test_26_q_advertised_everywhere(run, env_for, fake_home, proj, src_file):
     assert r3.returncode == 0, combined3
     assert "Proceed? [y/N] (q quits)" in r3.stdout
     assert "quit; nothing written" in combined3
+
+
+# P5.1: matching --sha256 pin on a URL source -> install proceeds normally
+def test_sha256_matching_pin_installs(run, env_for, fake_home, proj,
+                                      url_rules):
+    url = url_rules
+    pin = hashlib.sha256(URL_RULES_BODY).hexdigest()
+    r = run(["--source", url, "--sha256", pin, "--agent", "codex",
+             "--scope", "user", "--yes", "--project-dir", str(proj)],
+            env=env_for(fake_home))
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    target = fake_home / ".codex" / "AGENTS.md"
+    assert target.is_file()
+    assert URL_RULES_BODY in target.read_bytes()
+
+
+# P5.1: wrong --sha256 pin -> exit 3 with expected/got, zero files written
+def test_sha256_wrong_pin_aborts_writes_nothing(run, env_for, fake_home,
+                                                proj, url_rules):
+    url = url_rules
+    wrong = "0" * 64
+    r = run(["--source", url, "--sha256", wrong, "--agent", "codex",
+             "--scope", "user", "--yes", "--project-dir", str(proj)],
+            env=env_for(fake_home))
+    combined = r.stdout + r.stderr
+    assert r.returncode == 3
+    assert "sha256 mismatch" in combined
+    assert "expected" in combined and "got" in combined
+    assert not (fake_home / ".codex").exists()
+    assert not (proj / "AGENTS.md").exists()
+    assert not (proj / "BEHAVE.md").exists()
+
+
+# P5.1: --sha256 with a non-URL --source -> loud error (exit 3), no writes
+def test_sha256_with_local_source_errors(run, env_for, fake_home, proj,
+                                         src_file):
+    pin = hashlib.sha256(src_file.read_bytes()).hexdigest()
+    r = run(["--source", str(src_file), "--sha256", pin, "--agent", "codex",
+             "--scope", "user", "--yes", "--project-dir", str(proj)],
+            env=env_for(fake_home))
+    combined = r.stdout + r.stderr
+    assert r.returncode == 3
+    assert "only to URL sources" in combined
+    assert not (fake_home / ".codex").exists()
+    assert not (proj / "AGENTS.md").exists()

@@ -432,11 +432,31 @@ def _fetch_url(url):
     return data
 
 
-def load_source(source_arg):
-    """Resolution order: --source URL|PATH, bundled ./BEHAVE.md, CANONICAL_URL."""
+def _pin_check(source, sha256_pin):
+    """P5.1: with --sha256 set, verify the fetched bytes BEFORE any target
+    can execute; a mismatch raises SourceError so nothing was written."""
+    if sha256_pin and source.sha256 != sha256_pin.lower():
+        raise SourceError(
+            "sha256 mismatch for %s: expected %s..., got %s..."
+            % (source.label, sha256_pin[:12], source.sha256[:12]))
+    return source
+
+
+def load_source(source_arg, sha256_pin=None):
+    """Resolution order: --source URL|PATH, bundled ./BEHAVE.md, CANONICAL_URL.
+
+    P5.1: a --sha256 pin applies to URL fetches only; combined with any
+    local source (explicit path or the bundled fallback) it errors loudly,
+    and against a fetched source a mismatch aborts before any write.
+    """
+    if sha256_pin and source_arg and "://" not in source_arg:
+        # The pin exists to protect network fetches; loud beats silent.
+        raise SourceError("--sha256 applies only to URL sources; %s is a "
+                          "local path" % source_arg)
     if source_arg:
         if "://" in source_arg:
-            return Source(_fetch_url(source_arg), source_arg)
+            return _pin_check(
+                Source(_fetch_url(source_arg), source_arg), sha256_pin)
         p = Path(source_arg).expanduser()
         try:
             data = p.read_bytes()
@@ -447,13 +467,19 @@ def load_source(source_arg):
         return Source(data, str(p))
     bundled = Path(__file__).resolve().parent / "BEHAVE.md"
     if bundled.is_file():
+        if sha256_pin:
+            # Same loud rule: the bundled file is local, nothing to pin.
+            raise SourceError("--sha256 applies only to URL sources; the "
+                              "bundled %s is local (pass --source URL)"
+                              % bundled.name)
         try:
             data = bundled.read_bytes()
         except OSError as exc:
             raise SourceError("failed to read bundled %s: %s" % (bundled, exc))
         if data:
             return Source(data, "bundled %s" % bundled.name)
-    return Source(_fetch_url(CANONICAL_URL), CANONICAL_URL)
+    return _pin_check(
+        Source(_fetch_url(CANONICAL_URL), CANONICAL_URL), sha256_pin)
 
 
 # ---------------------------------------------------------------------------
@@ -1067,6 +1093,10 @@ def build_parser():
                    help="rules file source (default: bundled BEHAVE.md next "
                         "to install.py; falls back to fetching the "
                         "canonical URL)")
+    p.add_argument("--sha256", metavar="HEX", default=None,
+                   help="expected sha256 of rules fetched from a URL "
+                        "source; aborts before any write on mismatch "
+                        "(URL sources only)")
     p.add_argument("--block-id", default="behave",
                    help="marker id used in BEGIN/END comments (default: "
                         "behave); --remove needs the same id")
@@ -1193,7 +1223,7 @@ def cmd_install(args):
 
     # Resolve the source BEFORE any writes (exit 3, no partial writes).
     try:
-        source = load_source(args.source)
+        source = load_source(args.source, args.sha256)
     except SourceError as exc:
         err(str(exc))
         return 3
@@ -1244,7 +1274,7 @@ def cmd_install(args):
 
 def cmd_copy(args):
     try:
-        source = load_source(args.source)
+        source = load_source(args.source, args.sha256)
     except SourceError as exc:
         err(str(exc))
         return 3
@@ -1815,7 +1845,7 @@ def _tui_flow(args, reader):
     if args.remove:
         return _tui_remove(args, reader)
     try:
-        source = load_source(args.source)
+        source = load_source(args.source, args.sha256)
     except SourceError as exc:
         err(str(exc))
         return 3
