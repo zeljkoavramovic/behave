@@ -98,3 +98,17 @@ def test_8b_cursor_user_drop_warning(run, env_for, fake_home, src_file):
     assert entry["agent"] == "cursor"
     assert entry["warning"]
     assert "resolved home: %s" % fake_home in entry["warning"]
+
+
+# Phase 3.1 (roo): user-scope drop into ~/.roo/rules (no frontmatter,
+# plain marker + rules body)
+def test_roo_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "roo", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".roo" / "rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(MARKER)
+    assert not data.startswith(b"---")
+    assert b"# RULES\nrules body line\n" in data

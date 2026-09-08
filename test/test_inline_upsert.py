@@ -110,3 +110,22 @@ def test_6_size_warning(run, env_for, fake_home, tmp_path):
     assert r2.returncode == 0, r2.stdout + r2.stderr
     payload = json.loads(r2.stdout)
     assert payload["targets"][0]["warning"]
+
+
+# Phase 3.1 (roo): project scope with only roo selected rides the shared
+# ./AGENTS.md family block; the agent list reports the whole family
+def test_roo_project_shared_agents_md(run, env_for, fake_home, proj,
+                                      src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "roo", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--json", "--source", str(src_file)],
+            env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "roo" in served
+    assert "codex" in served  # the shared block, not a roo-only target
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

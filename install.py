@@ -155,7 +155,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
     {"id": "reasonix", "env": None, "markers": [("h", ".reasonix")], "tier": 3, "flags": ()},
     {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 3, "flags": ()},
-    {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 2, "flags": ()},
+    {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 1, "flags": ()},
     {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 3, "flags": ()},
     {"id": "terramind", "env": None, "markers": [("h", ".terramind")], "tier": 3, "flags": ()},
     {"id": "tinycloud", "env": None, "markers": [("h", ".tinycloud")], "tier": 3, "flags": ()},
@@ -177,13 +177,14 @@ AGENTS: List[Dict[str, Any]] = [
 AGENT_BY_ID = dict((a["id"], a) for a in AGENTS)
 ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 
-# Tier-1 install targets (INSTALLER-PLAN section 6): the 9 v1 agents.
+# Tier-1 install targets (INSTALLER-PLAN section 6); order = TUI menu.
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
-    "gemini-cli", "github-copilot", "pi", "omp",
+    "gemini-cli", "github-copilot", "pi", "omp", "roo",
 ]
 TIER1_SET = set(TIER1_ORDER)
-FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor"]  # shared ./AGENTS.md block
+FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
+              "roo"]  # shared ./AGENTS.md block
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -194,6 +195,7 @@ DISPLAY = {
     "cursor": "Cursor",
     "gemini-cli": "Gemini CLI",
     "github-copilot": "GitHub Copilot",
+    "roo": "Roo Code",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -201,6 +203,7 @@ DROP_FRONTMATTER = {
     "cursor": "---\nalwaysApply: true\n---\n",
     "devin": "---\ntrigger: always_on\n---\n",
     "github-copilot": '---\napplyTo: "**"\n---\n',
+    "roo": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -786,6 +789,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     home_base() / ".copilot" / "instructions" /
                     "behave.instructions.md",
                     "drop", drop_agent="github-copilot"))
+            elif a == "roo":
+                targets.append(_mk_target(
+                    ["roo"], home_base() / ".roo" / "rules" / "behave.md",
+                    "drop", drop_agent="roo"))
         return targets, notes
 
     # project scope
@@ -897,9 +904,13 @@ def restart_hints(agents):
     if "claude-code" in agents:
         lines.append("  - Claude Code: start a new session; verify via "
                      "/context (Memory files).")
-    if [a for a in ("codex", "opencode", "pi", "omp", "devin") if a in agents]:
-        lines.append("  - Codex / OpenCode / Pi / Oh My Pi / Devin: restart "
-                     "them (Codex rebuilds its chain every run).")
+    fam_restart = [a for a in FAMILY_IDS if a in agents and a != "cursor"]
+    if fam_restart:
+        # one grouped line for the AGENTS.md family; cursor keeps its own
+        names = " / ".join(DISPLAY.get(a, a) for a in FAMILY_IDS
+                           if a != "cursor")
+        lines.append("  - %s: restart them (Codex rebuilds its chain "
+                     "every run)." % names)
     if "cursor" in agents:
         lines.append("  - Cursor: restart the app (rules apply to Agent/Chat).")
     if "gemini-cli" in agents:
@@ -967,6 +978,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".gemini" / "GEMINI.md", "inline", ["gemini-cli"])
         add(home_base() / ".copilot" / "instructions" / "behave.instructions.md",
             "drop", ["github-copilot"], drop_agent="github-copilot")
+        add(home_base() / ".roo" / "rules" / "behave.md", "drop", ["roo"],
+            drop_agent="roo")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
@@ -1972,7 +1985,9 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text):
 
 def _target_label(t):
     if t["shared"]:
-        return "Codex / OpenCode / Pi / Devin / Cursor"
+        # derived, not hardcoded: the family grows and hardcodes went
+        # stale before (omp was missing from this label)
+        return " / ".join(DISPLAY.get(a, a) for a in FAMILY_IDS)
     return " / ".join([str(DISPLAY.get(a, a)) for a in t["agents"]])
 
 

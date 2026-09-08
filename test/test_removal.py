@@ -131,7 +131,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
              env=env)
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
-    assert "codex,opencode,pi,omp,devin,cursor" in agents
+    assert "codex,opencode,pi,omp,devin,cursor,roo" in agents
 
 
 # Test 12: stale-block hint printed when a second marked block exists
@@ -147,3 +147,17 @@ def test_12_stale_hint(run, env_for, fake_home, proj, src_file):
     assert r.returncode == 0, r.stdout + r.stderr
     assert "also found:" in r.stdout
     assert "CLAUDE.md" in r.stdout
+
+
+# Phase 3.1 (roo): --remove round-trip cleans the ~/.roo/rules drop
+def test_roo_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "roo", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".roo" / "rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "roo", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()
