@@ -118,7 +118,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 2, "flags": ()},
     {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
     {"id": "dexto", "env": None, "markers": [("h", ".dexto")], "tier": 3, "flags": ()},
-    {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 2, "flags": ()},
+    {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
     {"id": "eve", "env": None, "markers": [], "tier": 3, "flags": ("content", "cwd")},
     {"id": "firebender", "env": None, "markers": [("h", ".firebender")], "tier": 3, "flags": ()},
     {"id": "forgecode", "env": None, "markers": [("h", ".forge")], "tier": 3, "flags": ()},
@@ -181,11 +181,11 @@ ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
-    "roo", "augment", "kilo",
+    "roo", "augment", "kilo", "droid",
 ]
 TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
-              "roo", "augment", "kilo"]  # shared ./AGENTS.md block
+              "roo", "augment", "kilo", "droid"]  # shared ./AGENTS.md
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -199,6 +199,7 @@ DISPLAY = {
     "roo": "Roo Code",
     "augment": "Augment Code",
     "kilo": "Kilo Code",
+    "droid": "Droid",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -806,6 +807,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["kilo"], home_base() / ".kilocode" / "rules" /
                     "behave.md", "drop", drop_agent="kilo"))
+            elif a == "droid":
+                targets.append(_mk_target(
+                    ["droid"], home_base() / ".factory" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -997,6 +1002,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["augment"], drop_agent="augment")
         add(home_base() / ".kilocode" / "rules" / "behave.md", "drop",
             ["kilo"], drop_agent="kilo")
+        add(home_base() / ".factory" / "AGENTS.md", "inline", ["droid"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

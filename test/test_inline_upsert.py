@@ -167,3 +167,35 @@ def test_kilo_project_shared_agents_md(run, env_for, fake_home, proj,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (droid): user-scope inline block at the top of
+# ~/.factory/AGENTS.md
+def test_droid_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "droid", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".factory" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (droid): project scope with only droid selected rides the
+# shared ./AGENTS.md family block
+def test_droid_project_shared_agents_md(run, env_for, fake_home, proj,
+                                        src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "droid", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--json", "--source", str(src_file)],
+            env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "droid" in served
+    assert "codex" in served  # the shared block, not a droid-only target
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

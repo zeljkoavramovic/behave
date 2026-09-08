@@ -131,7 +131,8 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
              env=env)
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
-    assert "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo" in agents
+    assert "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo,droid" \
+        in agents
 
 
 # Test 12: stale-block hint printed when a second marked block exists
@@ -189,3 +190,17 @@ def test_kilo_user_remove_round_trip(run, env_for, fake_home, src_file):
              env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()
+
+
+# Phase 3.1 (droid): --remove round-trip cleans ~/.factory/AGENTS.md
+def test_droid_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "droid", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".factory" / "AGENTS.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "droid", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
