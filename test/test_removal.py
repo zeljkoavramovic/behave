@@ -1,6 +1,8 @@
 """Plan section 9, tests 9-12: removal semantics."""
 
 import json
+import os
+from pathlib import Path
 
 B = b"<!-- BEGIN behave - installed by install.py; --remove uninstalls -->\n"
 E = b"<!-- END behave -->\n"
@@ -132,7 +134,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
-                  "droid,deepagents,cline,crush,amp"
+                  "droid,deepagents,cline,crush,amp,goose"
     assert agents_list in agents
 
 
@@ -261,6 +263,24 @@ def test_amp_user_remove_round_trip(run, env_for, fake_home, src_file):
     target = fake_home / ".config" / "amp" / "AGENTS.md"
     assert target.is_file()
     r2 = run(["--remove", "--agent", "amp", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
+
+
+# Phase 3.1 (goose): --remove round-trip cleans the goose config dir's
+# AGENTS.md (appdata-based on Windows, XDG under the fake home elsewhere)
+def test_goose_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "goose", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    if os.name == "nt":
+        target = Path(env["APPDATA"]) / "Block" / "goose" / "AGENTS.md"
+    else:
+        target = fake_home / ".config" / "goose" / "AGENTS.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "goose", "--scope", "user", "--yes"],
              env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not target.exists()

@@ -197,3 +197,13 @@ def test_16_devin_dual_markers(run, env_for, fake_home, tmp_path, src_file):
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert (Path(env2["APPDATA"]) / "devin" / "AGENTS.md").is_file()
     assert not (h2 / ".config" / "devin" / "AGENTS.md").exists()
+
+
+# Phase 3.1 (goose): the new APPDATA marker detects a Windows-style
+# goose install (Block/goose under %APPDATA%, pointed into the fake home)
+def test_goose_appdata_marker_detected(run, env_for, fake_home):
+    env = env_for(fake_home)
+    (Path(env["APPDATA"]) / "Block" / "goose").mkdir(parents=True)
+    r = run(["--list"], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "goose" in detected_ids(r.stdout)

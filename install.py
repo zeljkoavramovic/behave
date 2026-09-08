@@ -124,7 +124,10 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "forgecode", "env": None, "markers": [("h", ".forge")], "tier": 3, "flags": ()},
     {"id": "gemini-cli", "env": None, "markers": [("h", ".gemini")], "tier": 1, "flags": ()},
     {"id": "github-copilot", "env": None, "markers": [("h", ".copilot")], "tier": 1, "flags": ()},
-    {"id": "goose", "env": None, "markers": [("x", "goose")], "tier": 2, "flags": ()},
+    # goose: the ("a", "Block/goose") marker matches the install target -
+    # Windows detection missed goose while it was XDG-only (goose stores
+    # config under %APPDATA%\Block\goose there, not under ~/.config).
+    {"id": "goose", "env": None, "markers": [("x", "goose"), ("a", "Block/goose")], "tier": 1, "flags": ()},
     {"id": "grok", "env": "GROK_HOME", "markers": [("h", ".grok")], "tier": 3, "flags": ()},
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 3, "flags": ()},
     {"id": "inference-sh", "env": None, "markers": [("h", ".inferencesh")], "tier": 3, "flags": ()},
@@ -182,14 +185,14 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
-    "amp",
+    "amp", "goose",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush", "amp"]
+              "crush", "amp", "goose"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -208,6 +211,7 @@ DISPLAY = {
     "cline": "Cline",
     "crush": "Crush",
     "amp": "Amp",
+    "goose": "Goose",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -327,6 +331,18 @@ def devin_dirs():
     if existing:
         return existing
     return [seen[0]]
+
+
+def goose_config_dir():
+    """Goose config dir: %APPDATA%/Block/goose on Windows, XDG goose
+    elsewhere - goose uses the etcetera crate's native per-platform
+    strategy (AppData on Windows, XDG everywhere else)."""
+    if os.name == "nt":
+        # appdata_base() is None only on POSIX; mirror its own nt
+        # fallback so the checker sees a Path here too.
+        appd = appdata_base() or home_base() / "AppData" / "Roaming"
+        return appd / "Block" / "goose"
+    return xdg_base() / "goose"
 
 
 # ---------------------------------------------------------------------------
@@ -849,6 +865,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["amp"], home_base() / ".config" / "amp" / "AGENTS.md",
                     "inline"))
+            elif a == "goose":
+                targets.append(_mk_target(
+                    ["goose"], goose_config_dir() / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1048,6 +1068,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(xdg_base() / "crush" / "CRUSH.md", "inline", ["crush"])
         add(home_base() / ".config" / "amp" / "AGENTS.md", "inline",
             ["amp"])
+        add(goose_config_dir() / "AGENTS.md", "inline", ["goose"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
