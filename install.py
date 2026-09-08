@@ -164,7 +164,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "tinycloud", "env": None, "markers": [("h", ".tinycloud")], "tier": 3, "flags": ()},
     {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 3, "flags": ()},
     {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 3, "flags": ()},
-    {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 2, "flags": ()},
+    {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
     {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 3, "flags": ("multi",)},
@@ -185,14 +185,14 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
-    "amp", "goose", "zed", "openhands",
+    "amp", "goose", "zed", "openhands", "warp",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush", "amp", "goose", "zed", "openhands"]
+              "crush", "amp", "goose", "zed", "openhands", "warp"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -214,6 +214,7 @@ DISPLAY = {
     "goose": "Goose",
     "zed": "Zed",
     "openhands": "OpenHands",
+    "warp": "Warp",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -918,6 +919,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["openhands"], home_base() / ".agents" / "skills" /
                     "behave.md", "drop", drop_agent="openhands"))
+            elif a == "warp":
+                # ~/.agents/AGENTS.md is warp's ONLY registered global
+                # rulefile (docs.warp.dev + warp source
+                # GlobalRuleSource::Agents) AND a de-facto shared
+                # cross-agent file (cline, droid, goose, kimi-code read
+                # it too) - the marked block is idempotent, so it serves
+                # every reader.
+                targets.append(_mk_target(
+                    ["warp"], home_base() / ".agents" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1122,6 +1133,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             add(d / "AGENTS.md", "inline", ["zed"])
         add(home_base() / ".agents" / "skills" / "behave.md", "drop",
             ["openhands"], drop_agent="openhands")
+        add(home_base() / ".agents" / "AGENTS.md", "inline", ["warp"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

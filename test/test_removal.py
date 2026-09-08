@@ -134,7 +134,8 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
-                  "droid,deepagents,cline,crush,amp,goose,zed,openhands"
+                  "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
+                  "warp"
     assert agents_list in agents
 
 
@@ -319,3 +320,17 @@ def test_openhands_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()
+
+
+# Phase 3.1 (warp): --remove round-trip cleans ~/.agents/AGENTS.md
+def test_warp_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "warp", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".agents" / "AGENTS.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "warp", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
