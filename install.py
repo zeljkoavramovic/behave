@@ -100,7 +100,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 3, "flags": ()},
     {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
     {"id": "autohand-code", "env": "AUTOHAND_HOME", "markers": [("h", ".autohand")], "tier": 3, "flags": ()},
-    {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 2, "flags": ()},
+    {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
     {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 3, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
     {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 3, "flags": ("multi",)},
@@ -180,11 +180,12 @@ ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 # Tier-1 install targets (INSTALLER-PLAN section 6); order = TUI menu.
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
-    "gemini-cli", "github-copilot", "pi", "omp", "roo",
+    "gemini-cli", "github-copilot", "pi", "omp",
+    "roo", "augment",
 ]
 TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
-              "roo"]  # shared ./AGENTS.md block
+              "roo", "augment"]  # shared ./AGENTS.md block
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -196,9 +197,11 @@ DISPLAY = {
     "gemini-cli": "Gemini CLI",
     "github-copilot": "GitHub Copilot",
     "roo": "Roo Code",
+    "augment": "Augment Code",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
+    "augment": "",
     "claude-code": "",
     "cursor": "---\nalwaysApply: true\n---\n",
     "devin": "---\ntrigger: always_on\n---\n",
@@ -793,6 +796,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["roo"], home_base() / ".roo" / "rules" / "behave.md",
                     "drop", drop_agent="roo"))
+            elif a == "augment":
+                targets.append(_mk_target(
+                    ["augment"], home_base() / ".augment" / "rules" /
+                    "behave.md", "drop", drop_agent="augment"))
         return targets, notes
 
     # project scope
@@ -980,6 +987,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             "drop", ["github-copilot"], drop_agent="github-copilot")
         add(home_base() / ".roo" / "rules" / "behave.md", "drop", ["roo"],
             drop_agent="roo")
+        add(home_base() / ".augment" / "rules" / "behave.md", "drop",
+            ["augment"], drop_agent="augment")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
