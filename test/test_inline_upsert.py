@@ -430,3 +430,22 @@ def test_zed_project_shared_agents_md(run, env_for, fake_home, proj,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (openhands): project scope with only openhands selected rides
+# the shared ./AGENTS.md family block
+def test_openhands_project_shared_agents_md(run, env_for, fake_home, proj,
+                                            src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "openhands", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--json", "--source", str(src_file)],
+            env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "openhands" in served
+    assert "codex" in served  # the shared block, not an openhands-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

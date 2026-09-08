@@ -148,7 +148,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
     {"id": "omp", "env": None, "markers": [("h", ".omp/agent")], "tier": 1, "flags": ()},
     {"id": "opencode", "env": None, "markers": [("x", "opencode")], "tier": 1, "flags": ()},
-    {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 2, "flags": ()},
+    {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 1, "flags": ()},
     {"id": "ona", "env": None, "markers": [("h", ".ona")], "tier": 2, "flags": ()},
     {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
     {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 3, "flags": ("multi",)},
@@ -185,14 +185,14 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
-    "amp", "goose", "zed",
+    "amp", "goose", "zed", "openhands",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush", "amp", "goose", "zed"]
+              "crush", "amp", "goose", "zed", "openhands"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -213,6 +213,7 @@ DISPLAY = {
     "amp": "Amp",
     "goose": "Goose",
     "zed": "Zed",
+    "openhands": "OpenHands",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -223,6 +224,7 @@ DROP_FRONTMATTER = {
     "devin": "---\ntrigger: always_on\n---\n",
     "github-copilot": '---\napplyTo: "**"\n---\n',
     "kilo": "",
+    "openhands": "",
     "roo": "",
 }
 
@@ -907,6 +909,15 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 for d in zed_dirs():
                     targets.append(_mk_target(
                         ["zed"], d / "AGENTS.md", "inline"))
+            elif a == "openhands":
+                # OpenHands CLI hardwires load_user_skills=True and
+                # always loads trigger-less .md files from
+                # ~/.agents/skills/ (the modern dir; legacy
+                # ~/.openhands/{skills,microagents}/ also read - marker
+                # ~/.openhands stays detection-only).
+                targets.append(_mk_target(
+                    ["openhands"], home_base() / ".agents" / "skills" /
+                    "behave.md", "drop", drop_agent="openhands"))
         return targets, notes
 
     # project scope
@@ -1109,6 +1120,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(goose_config_dir() / "AGENTS.md", "inline", ["goose"])
         for d in zed_dirs():
             add(d / "AGENTS.md", "inline", ["zed"])
+        add(home_base() / ".agents" / "skills" / "behave.md", "drop",
+            ["openhands"], drop_agent="openhands")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
