@@ -1,5 +1,7 @@
 """Plan section 9, tests 7-8: drop mode."""
 
+import json
+
 MARKER = (b"<!-- installed by install.py (behave); "
           b"--remove deletes this file -->\n")
 
@@ -72,3 +74,27 @@ def test_8_remove_only_marker_bearing(run, env_for, fake_home, src_file):
     assert "nothing installed" in r3.stdout
     assert claude.read_bytes() == b"my own claude rules\n"
     assert cursor.read_bytes() == b"my own cursor rules\n"
+
+
+# Test 8b: user-scope Cursor drop warns that ~/.cursor/rules loads only
+#          for projects inside the home directory (stdout + --json field)
+def test_8b_cursor_user_drop_warning(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "cursor", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    cursor = fake_home / ".cursor" / "rules" / "behave.mdc"
+    assert cursor.is_file()
+    assert cursor.read_bytes().startswith(b"---\nalwaysApply: true\n---\n")
+    assert "warning:" in r.stdout
+    assert "resolved home:" in r.stdout
+    assert str(fake_home) in r.stdout
+
+    r2 = run(["--agent", "cursor", "--scope", "user", "--yes", "--json",
+              "--source", str(src_file)], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    payload = json.loads(r2.stdout)
+    entry = payload["targets"][0]
+    assert entry["agent"] == "cursor"
+    assert entry["warning"]
+    assert "resolved home: %s" % fake_home in entry["warning"]

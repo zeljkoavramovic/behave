@@ -1,10 +1,11 @@
+# install.py - BEHAVE.md installer
+# Copyright © 2026 Zeljko Avramovic
+#
 # Detection table derived from vercel-labs/skills
 # https://github.com/vercel-labs/skills - Copyright (c) 2026 Vercel, Inc.
 # Licensed under the MIT License; full text follows.
 #
 # MIT License
-#
-# Copyright (c) 2026 Vercel, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -181,7 +182,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi",
 ]
 TIER1_SET = set(TIER1_ORDER)
-FAMILY_IDS = ["codex", "opencode", "pi", "devin"]  # shared ./AGENTS.md block
+FAMILY_IDS = ["codex", "opencode", "pi", "devin", "cursor"]  # shared ./AGENTS.md block
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -626,6 +627,16 @@ def drop_has_marker(path, block_id):
     return drop_marker_bytes(block_id) in raw
 
 
+def cursor_user_warning():
+    """Limitation note for user-scope Cursor drops: Cursor loads
+    ~/.cursor/rules only when the opened project is inside the home
+    directory (it walks up from the project dir to discover it)."""
+    return ("Cursor loads ~/.cursor/rules only when the opened project is "
+            "inside your home directory (resolved home: %s); projects "
+            "elsewhere will not load it - use project scope (shared "
+            "AGENTS.md) for those" % home_base())
+
+
 # ---------------------------------------------------------------------------
 # Plain copy engine (P2.6, D3)
 # ---------------------------------------------------------------------------
@@ -778,10 +789,6 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
         if variant == "local":
             t["gitignore"] = True
         targets.append(t)
-    if "cursor" in agents:
-        targets.append(_mk_target(
-            ["cursor"], project_dir / ".cursor" / "rules" / "behave.mdc",
-            "drop", drop_agent="cursor"))
     if "gemini-cli" in agents:
         targets.append(_mk_target(
             ["gemini-cli"], project_dir / "GEMINI.md", "inline"))
@@ -839,6 +846,12 @@ def execute_targets(targets, source, block_id, project_dir=None):
                 write_drop(t["path"], t["drop_agent"], block_id, source.data)
                 entry["status"] = "upserted" if existed else "created"
                 detail = "rules file rewritten" if existed else "rules file created"
+                if t["drop_agent"] == "cursor":
+                    warning = cursor_user_warning()
+                    entry["warning"] = (
+                        warning if entry["warning"] is None
+                        else entry["warning"] + "; " + warning)
+                    say("  warning: %s" % warning)
             else:
                 warning = upsert_inline(t["path"], block_id, source.data)
                 entry["status"] = "upserted" if existed else "created"
@@ -947,6 +960,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(d / "AGENTS.md", "inline", FAMILY_IDS)
         add(d / ".devin" / "rules" / "behave.md", "drop", ["devin"],
             drop_agent="devin")
+        # legacy cleanup: older installers dropped .cursor/rules/behave.mdc
+        # in projects (cursor now uses the shared AGENTS.md family block)
         add(d / ".cursor" / "rules" / "behave.mdc", "drop", ["cursor"],
             drop_agent="cursor")
         add(d / ".github" / "copilot-instructions.md", "inline",
@@ -1439,7 +1454,7 @@ def _parse_selection(answer, n):
 
 def _target_label(t):
     if t["shared"]:
-        return "Codex / OpenCode / Pi / Devin"
+        return "Codex / OpenCode / Pi / Devin / Cursor"
     return " / ".join([str(DISPLAY.get(a, a)) for a in t["agents"]])
 
 
@@ -1458,6 +1473,9 @@ def _preview_targets(targets, project_dir):
             print("  - %s: new file %s" % (_target_label(t), t["path"]))
             print("    (%s; the rules dir is created if missing)"
                   % DROP_CONSENT)
+            if t["drop_agent"] == "cursor":
+                print("    (loads only for projects inside your home dir; "
+                      "for other projects use project scope)")
         elif existed:
             print("  - %s: rules block AT THE TOP of %s"
                   % (_target_label(t), t["path"]))
@@ -1604,8 +1622,8 @@ def _tui_pick_family(reader, forced=None):
     print("Which family?")
     print("  (a)gents.md - one marked block at the TOP of AGENTS.md "
           "(created if missing).")
-    print("                Serves Codex + OpenCode + Pi + Devin + every "
-          "other AGENTS.md reader in this repo.")
+    print("                Serves Codex + OpenCode + Pi + Devin + Cursor "
+          "+ every other AGENTS.md reader in this repo.")
     print("                Same consent wording: block first, your own "
           "instructions after - yours keep more weight.")
     print("  (c)laude.md - the Claude Code family; pick the exact file next.")
@@ -1639,7 +1657,7 @@ def _tui_project(args, reader, source, pre_variant):
             fam_of[a] = "a"
         elif a == "gemini-cli":
             fam_of[a] = "g"
-    extras = [a for a in requested if a in ("cursor", "github-copilot")]
+    extras = [a for a in requested if a == "github-copilot"]
     fams = set(fam_of.values())
     forced = fams.pop() if len(fams) == 1 else None
 
@@ -1671,15 +1689,10 @@ def _tui_project(args, reader, source, pre_variant):
         targets.append(_mk_target([], project_dir / "BEHAVE.md", "copy",
                                   kind="copy"))
     for a in extras:
-        if a == "cursor":
-            targets.append(_mk_target(
-                ["cursor"], project_dir / ".cursor" / "rules" / "behave.mdc",
-                "drop", drop_agent="cursor"))
-        elif a == "github-copilot":
-            targets.append(_mk_target(
-                ["github-copilot"],
-                project_dir / ".github" / "copilot-instructions.md",
-                "inline"))
+        targets.append(_mk_target(
+            ["github-copilot"],
+            project_dir / ".github" / "copilot-instructions.md",
+            "inline"))
 
     _preview_targets(targets, project_dir)
     print()

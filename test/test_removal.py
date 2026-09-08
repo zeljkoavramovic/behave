@@ -62,10 +62,15 @@ def test_10_scan_all_and_narrowing(run, env_for, fake_home, tmp_path,
     run(["--agent", "claude-code", "--scope", "project", "--claude-variant",
          "root", "--project-dir", str(proj), "--yes", "--source",
          str(src_file)], env=env)
-    run(["--agent", "gemini-cli,cursor,github-copilot", "--scope",
-         "project", "--project-dir", str(proj), "--yes", "--source",
-         str(src_file)], env=env)
-    assert (proj / ".cursor" / "rules" / "behave.mdc").is_file()
+    r_g = run(["--agent", "gemini-cli,cursor,github-copilot", "--scope",
+               "project", "--project-dir", str(proj), "--yes", "--source",
+               str(src_file)], env=env)
+    assert r_g.returncode == 0, r_g.stdout + r_g.stderr
+    # cursor is family now; the project has a Claude file, so the shared
+    # AGENTS.md path is skipped (note) and no .cursor drop is written
+    assert "Claude file" in r_g.stdout
+    assert not (proj / ".cursor" / "rules" / "behave.mdc").exists()
+    assert not (proj / "AGENTS.md").exists()
 
     r = run(["--remove", "--project-dir", str(proj), "--yes"], env=env)
     assert r.returncode == 0, r.stdout + r.stderr
@@ -81,10 +86,17 @@ def test_10_scan_all_and_narrowing(run, env_for, fake_home, tmp_path,
     run(["--agent", "gemini-cli,cursor", "--scope", "project",
          "--project-dir", str(proj2), "--yes", "--source", str(src_file)],
         env=env)
+    assert (proj2 / "AGENTS.md").is_file()
+    # legacy cleanup: a marker-bearing .cursor/rules/behave.mdc dropped by
+    # an older installer must still be found and deleted
+    legacy = proj2 / ".cursor" / "rules" / "behave.mdc"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_bytes(MARKER + b"# legacy cursor rules\n")
     r2 = run(["--remove", "--agent", "cursor", "--scope", "project",
               "--project-dir", str(proj2), "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
-    assert not (proj2 / ".cursor" / "rules" / "behave.mdc").exists()
+    assert not legacy.exists()
+    assert not (proj2 / "AGENTS.md").exists()
     assert b"<!-- BEGIN behave " in (proj2 / "GEMINI.md").read_bytes()
 
     home2 = tmp_path / "h2"
@@ -109,7 +121,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
 
     r2 = run(["--remove", "--project-dir", str(proj), "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
-    assert "codex,opencode,pi,devin" in r2.stdout
+    assert "codex,opencode,pi,devin,cursor" in r2.stdout
     assert not (proj / "AGENTS.md").exists()
 
     run(["--agent", "codex,opencode,pi,devin", "--scope", "project",
@@ -119,7 +131,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
              env=env)
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
-    assert "codex,opencode,pi,devin" in agents
+    assert "codex,opencode,pi,devin,cursor" in agents
 
 
 # Test 12: stale-block hint printed when a second marked block exists

@@ -27,22 +27,26 @@ def test_smoke_full_cycle(run, env_for, tmp_path, src_file, git_available):
     assert r2.returncode == 0, r2.stdout + r2.stderr
     r3 = run(["--agent", "cursor", "--scope", "project"] + base, env=env)
     assert r3.returncode == 0, r3.stdout + r3.stderr
+    # cursor joined the family: one shared AGENTS.md target whose agent
+    # field lists the whole family (no .cursor/rules drop anymore)
+    assert "codex,opencode,pi,devin,cursor" in r3.stdout
 
     f_rules = repo / ".claude" / "rules" / "behave.md"
     f_agents = repo / "AGENTS.md"
     f_cursor = repo / ".cursor" / "rules" / "behave.mdc"
     assert f_rules.read_bytes().startswith(MARKER)
-    assert f_agents.read_bytes().startswith(B)
-    assert f_cursor.read_bytes().startswith(b"---\nalwaysApply: true\n---\n")
-    assert b"# RULES\nrules body line\n" in f_agents.read_bytes()
+    agents_data = f_agents.read_bytes()
+    assert agents_data.startswith(B)
+    assert b"# RULES\nrules body line\n" in agents_data
+    assert agents_data.count(b"<!-- BEGIN behave ") == 1
+    assert not f_cursor.exists()
 
     st = subprocess.run(["git", "status", "--porcelain"], cwd=str(repo),
                         capture_output=True, text=True, env=env,
                         timeout=60)
-    # untracked dirs are collapsed by git: ?? .claude/, ?? .cursor/, ?? AGENTS.md
+    # untracked dirs are collapsed by git: ?? .claude/, ?? AGENTS.md
     assert "AGENTS.md" in st.stdout
     assert ".claude/" in st.stdout
-    assert ".cursor/" in st.stdout
 
     r4 = run(["--remove", "--scope", "project", "--project-dir", str(repo),
               "--yes"], env=env)
