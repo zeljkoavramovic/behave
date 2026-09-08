@@ -1342,6 +1342,15 @@ class StdinReader(object):
     Every later prompt line is served by the same thread, so nothing else
     ever reads stdin.  threading/queue (stdlib) are imported lazily to
     keep the module import surface exactly as specified in the plan.
+
+    All reads use os.read() on the raw file descriptor, never
+    sys.stdin.buffer: BufferedReader.read()/readline() hold the buffer
+    lock across the blocking console read, and if the daemon thread is
+    still blocked there when main() returns, interpreter shutdown cannot
+    acquire the lock to finalize stdin -> "Fatal Python error:
+    _enter_buffered_busy ... possibly due to daemon threads" followed by
+    a segfault (observed on Windows/mintty).  os.read() owns no io lock,
+    so a thread blocked in it at exit is harmless.
     """
 
     def __init__(self, probe_timeout=None):
@@ -1350,9 +1359,13 @@ class StdinReader(object):
         self._queue = queue_mod.Queue()
         self._probe_eof = False
         self._first = None
-        buf = getattr(sys.stdin, "buffer", None)
-        self._buf = buf
-        if buf is None:
+        self._pushback = None
+        try:
+            fd = sys.stdin.fileno()
+        except (AttributeError, OSError, ValueError):
+            fd = None
+        self._fd = fd
+        if fd is None:
             self._probe_eof = True
             self._thread = None
             return
@@ -1365,34 +1378,53 @@ class StdinReader(object):
                     self._probe_eof = True
             # else: read still blocking -> interactive terminal -> TUI
 
+    def _read_byte(self, fd):
+        if self._pushback is not None:
+            b, self._pushback = self._pushback, None
+            return b
+        return os.read(fd, 1)
+
     def _run(self):
-        buf = self._buf
-        if buf is None:
+        fd = self._fd
+        if fd is None:
             self._queue.put(None)
             return
-        try:
-            first = buf.read(1)
-        except Exception:
-            first = b""
-        self._first = first
-        if first == b"":
-            self._queue.put(None)
-            return
-        pending = first
+        pending = b""
         while True:
             try:
-                chunk = buf.readline()
+                b = self._read_byte(fd)
             except Exception:
-                chunk = b""
-            if chunk == b"":
+                b = b""
+            if self._first is None:
+                self._first = b
+            if b == b"":
                 if pending:
                     self._queue.put(pending)
                 self._queue.put(None)
                 return
-            pending = pending + chunk
-            if pending.endswith(b"\n") or pending.endswith(b"\r"):
-                self._queue.put(pending)
+            if b == b"\n":
+                self._queue.put(pending + b"\n")
                 pending = b""
+                continue
+            if b == b"\r":
+                # CRLF is one terminator: peek for the LF half; a lone
+                # CR terminates too, and its follower is pushed back.
+                try:
+                    nxt = self._read_byte(fd)
+                except Exception:
+                    nxt = b""
+                if nxt == b"\n":
+                    self._queue.put(pending + b"\r\n")
+                    pending = b""
+                    continue
+                self._queue.put(pending + b"\r")
+                pending = b""
+                if nxt == b"":
+                    self._queue.put(None)
+                    return
+                self._pushback = nxt
+                continue
+            pending = pending + b
 
     def probe_saw_eof(self):
         return self._probe_eof
