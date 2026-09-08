@@ -115,7 +115,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")], "tier": 3, "flags": ()},
     {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 2, "flags": ()},
     {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
-    {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 2, "flags": ()},
+    {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
     {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
     {"id": "dexto", "env": None, "markers": [("h", ".dexto")], "tier": 3, "flags": ()},
     {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
@@ -181,11 +181,13 @@ ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
-    "roo", "augment", "kilo", "droid",
+    "roo", "augment", "kilo", "droid", "deepagents",
 ]
 TIER1_SET = set(TIER1_ORDER)
+# Every family member reads project-root AGENTS.md by default; project
+# scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
-              "roo", "augment", "kilo", "droid"]  # shared ./AGENTS.md
+              "roo", "augment", "kilo", "droid", "deepagents"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -200,6 +202,7 @@ DISPLAY = {
     "augment": "Augment Code",
     "kilo": "Kilo Code",
     "droid": "Droid",
+    "deepagents": "Deep Agents",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -811,6 +814,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["droid"], home_base() / ".factory" / "AGENTS.md",
                     "inline"))
+            elif a == "deepagents":
+                targets.append(_mk_target(
+                    ["deepagents"], home_base() / ".deepagents" / "agent" /
+                    "AGENTS.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1003,6 +1010,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".kilocode" / "rules" / "behave.md", "drop",
             ["kilo"], drop_agent="kilo")
         add(home_base() / ".factory" / "AGENTS.md", "inline", ["droid"])
+        add(home_base() / ".deepagents" / "agent" / "AGENTS.md", "inline",
+            ["deepagents"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
