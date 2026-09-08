@@ -104,7 +104,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 3, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
     {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 3, "flags": ("multi",)},
-    {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 2, "flags": ()},
+    {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
     {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
     {"id": "codemaker", "env": None, "markers": [("h", ".codemaker")], "tier": 3, "flags": ()},
@@ -181,13 +181,13 @@ ALL_IDS: List[str] = [a["id"] for a in AGENTS]
 TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
-    "roo", "augment", "kilo", "droid", "deepagents",
+    "roo", "augment", "kilo", "droid", "deepagents", "cline",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
-              "roo", "augment", "kilo", "droid", "deepagents"]
+              "roo", "augment", "kilo", "droid", "deepagents", "cline"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -203,11 +203,13 @@ DISPLAY = {
     "kilo": "Kilo Code",
     "droid": "Droid",
     "deepagents": "Deep Agents",
+    "cline": "Cline",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
     "augment": "",
     "claude-code": "",
+    "cline": "",
     "cursor": "---\nalwaysApply: true\n---\n",
     "devin": "---\ntrigger: always_on\n---\n",
     "github-copilot": '---\napplyTo: "**"\n---\n',
@@ -818,6 +820,14 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["deepagents"], home_base() / ".deepagents" / "agent" /
                     "AGENTS.md", "inline"))
+            elif a == "cline":
+                # cline's SDK loader reads ~/.cline/rules among its global
+                # rules search paths; chosen over Documents/Cline/Rules
+                # because it matches the ~/.cline detection marker and
+                # needs no Documents-dir resolver.
+                targets.append(_mk_target(
+                    ["cline"], home_base() / ".cline" / "rules" /
+                    "behave.md", "drop", drop_agent="cline"))
         return targets, notes
 
     # project scope
@@ -1012,6 +1022,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".factory" / "AGENTS.md", "inline", ["droid"])
         add(home_base() / ".deepagents" / "agent" / "AGENTS.md", "inline",
             ["deepagents"])
+        add(home_base() / ".cline" / "rules" / "behave.md", "drop",
+            ["cline"], drop_agent="cline")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

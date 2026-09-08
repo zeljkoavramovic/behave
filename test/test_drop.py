@@ -140,3 +140,17 @@ def test_kilo_user_drop(run, env_for, fake_home, src_file):
     assert data.startswith(MARKER)
     assert not data.startswith(b"---")
     assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 3.1 (cline): user-scope drop into ~/.cline/rules (no frontmatter,
+# plain marker + rules body)
+def test_cline_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "cline", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".cline" / "rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(MARKER)
+    assert not data.startswith(b"---")
+    assert b"# RULES\nrules body line\n" in data
