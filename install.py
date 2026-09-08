@@ -166,7 +166,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 3, "flags": ()},
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 2, "flags": ()},
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
-    {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 2, "flags": ()},
+    {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
     {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 3, "flags": ("multi",)},
     {"id": "zencoder", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
     {"id": "zenflow", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
@@ -185,14 +185,14 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
-    "amp", "goose",
+    "amp", "goose", "zed",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush", "amp", "goose"]
+              "crush", "amp", "goose", "zed"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -212,6 +212,7 @@ DISPLAY = {
     "crush": "Crush",
     "amp": "Amp",
     "goose": "Goose",
+    "zed": "Zed",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -343,6 +344,39 @@ def goose_config_dir():
         appd = appdata_base() or home_base() / "AppData" / "Roaming"
         return appd / "Block" / "goose"
     return xdg_base() / "goose"
+
+
+def zed_dirs():
+    """User-scope Zed dirs: every existing marker dir, else platform default.
+
+    Multi-marker rule (section 6), devin precedent: Zed reads
+    <config>/AGENTS.md and its config dir lives in up to three places
+    (XDG, %APPDATA%/Zed on Windows, Flatpak); when several exist, ALL
+    get an AGENTS.md. Needs Zed >= 1.4.0 (the old rules/ dir was removed
+    in 1.4.0) - no runtime version check is possible; the floor is
+    documented in the plan findings only.
+    """
+    appd = appdata_base()
+    flat = flatpak_xdg_base()
+    cands = []
+    if os.name == "nt":
+        if appd is not None:
+            cands.append(appd / "Zed")
+        cands.append(xdg_base() / "zed")
+    else:
+        cands.append(xdg_base() / "zed")
+        if appd is not None:
+            cands.append(appd / "Zed")
+    if flat is not None:
+        cands.append(flat / "zed")
+    seen = []
+    for d in cands:
+        if d not in seen:
+            seen.append(d)
+    existing = [d for d in seen if d.is_dir()]
+    if existing:
+        return existing
+    return [seen[0]]
 
 
 # ---------------------------------------------------------------------------
@@ -869,6 +903,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["goose"], goose_config_dir() / "AGENTS.md",
                     "inline"))
+            elif a == "zed":
+                for d in zed_dirs():
+                    targets.append(_mk_target(
+                        ["zed"], d / "AGENTS.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1069,6 +1107,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".config" / "amp" / "AGENTS.md", "inline",
             ["amp"])
         add(goose_config_dir() / "AGENTS.md", "inline", ["goose"])
+        for d in zed_dirs():
+            add(d / "AGENTS.md", "inline", ["zed"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

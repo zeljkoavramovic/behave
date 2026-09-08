@@ -389,3 +389,44 @@ def test_goose_project_shared_agents_md(run, env_for, fake_home, proj,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+def zed_default_target(env, fake_home):
+    # zed_dirs() fallback when no config dir exists yet: %APPDATA%/Zed on
+    # Windows, ~/.config/zed elsewhere
+    if os.name == "nt":
+        return Path(env["APPDATA"]) / "Zed" / "AGENTS.md"
+    return fake_home / ".config" / "zed" / "AGENTS.md"
+
+
+# Phase 3.1 (zed): user-scope inline block at the top of the default Zed
+# config dir's AGENTS.md
+def test_zed_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "zed", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = zed_default_target(env, fake_home).read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (zed): project scope with only zed selected rides the shared
+# ./AGENTS.md family block
+def test_zed_project_shared_agents_md(run, env_for, fake_home, proj,
+                                      src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "zed", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--json", "--source", str(src_file)],
+            env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "zed" in served
+    assert "codex" in served  # the shared block, not a zed-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

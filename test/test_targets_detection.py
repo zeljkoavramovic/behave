@@ -207,3 +207,25 @@ def test_goose_appdata_marker_detected(run, env_for, fake_home):
     r = run(["--list"], env=env)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "goose" in detected_ids(r.stdout)
+
+
+# Phase 3.1 (zed): both config markers present (devin precedent) ->
+# user install writes BOTH AGENTS.md files; --remove cleans both
+def test_zed_dual_config_dirs(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    appdata_dir = Path(env["APPDATA"]) / "Zed"
+    appdata_dir.mkdir(parents=True)
+    (fake_home / ".config" / "zed").mkdir(parents=True)
+    r = run(["--agent", "zed", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    both = [appdata_dir / "AGENTS.md",
+            fake_home / ".config" / "zed" / "AGENTS.md"]
+    for f in both:
+        assert f.is_file(), f
+        assert f.read_bytes().startswith(B)
+    r2 = run(["--remove", "--agent", "zed", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    for f in both:
+        assert not f.exists()
