@@ -95,7 +95,7 @@ DROP_CONSENT = (
 #        "deprecated" (report-only deprecation notice)
 AGENTS: List[Dict[str, Any]] = [
     {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 3, "flags": ()},
-    {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 2, "flags": ()},
+    {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 1, "flags": ()},
     {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 3, "flags": ()},
     {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 3, "flags": ()},
     {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
@@ -182,13 +182,14 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
+    "amp",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush"]
+              "crush", "amp"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -206,6 +207,7 @@ DISPLAY = {
     "deepagents": "Deep Agents",
     "cline": "Cline",
     "crush": "Crush",
+    "amp": "Amp",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -839,6 +841,14 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["crush"], xdg_base() / "crush" / "CRUSH.md",
                     "inline"))
+            elif a == "amp":
+                # amp hardcodes $HOME/.config on every platform
+                # (including Windows) and does not honor
+                # XDG_CONFIG_HOME, so home_base()/".config" - NOT
+                # xdg_base().
+                targets.append(_mk_target(
+                    ["amp"], home_base() / ".config" / "amp" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1036,6 +1046,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".cline" / "rules" / "behave.md", "drop",
             ["cline"], drop_agent="cline")
         add(xdg_base() / "crush" / "CRUSH.md", "inline", ["crush"])
+        add(home_base() / ".config" / "amp" / "AGENTS.md", "inline",
+            ["amp"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

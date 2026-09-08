@@ -132,7 +132,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
-                  "droid,deepagents,cline,crush"
+                  "droid,deepagents,cline,crush,amp"
     assert agents_list in agents
 
 
@@ -247,6 +247,20 @@ def test_crush_user_remove_round_trip(run, env_for, fake_home, src_file):
     target = fake_home / ".config" / "crush" / "CRUSH.md"
     assert target.is_file()
     r2 = run(["--remove", "--agent", "crush", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
+
+
+# Phase 3.1 (amp): --remove round-trip cleans ~/.config/amp/AGENTS.md
+def test_amp_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "amp", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".config" / "amp" / "AGENTS.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "amp", "--scope", "user", "--yes"],
              env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not target.exists()
