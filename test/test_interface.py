@@ -152,3 +152,53 @@ def test_23_tui_copy_confirm(run, env_for, fake_home, proj, src_file):
     assert r2.returncode == 4, r2.stdout + r2.stderr
     assert "kept" in (r2.stdout + r2.stderr)
     assert (proj / "BEHAVE.md").read_bytes() == b"CUSTOM LOCAL RULES\n"
+
+
+# Test 24: q at the agent picker quits cleanly (exit 0, nothing written)
+def test_24_q_quits_agent_picker(run, env_for, fake_home, src_file):
+    r = run(["--interactive", "--agent", "codex", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home, input_text="u\nq\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "q = quit" in r.stdout
+    assert "quit; nothing written" in combined
+    assert "Traceback" not in combined
+    assert not (fake_home / ".codex").exists()
+
+
+# Test 25: q works at every prompt (scope menu here); quit exits whole TUI
+def test_25_q_quits_scope_prompt(run, env_for, fake_home, src_file):
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home, input_text="q\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "(q)uit" in r.stdout
+    assert "quit; nothing written" in combined
+    assert "Traceback" not in combined
+
+
+# Test 26: every menu/confirm advertises q; q quits from each of them
+def test_26_q_advertised_everywhere(run, env_for, fake_home, proj, src_file):
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=proj, input_text="p\nq\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert r.stdout.count("(q)uit") >= 2  # scope menu AND family menu
+    assert "quit; nothing written" in combined
+
+    r2 = run(["--interactive", "--source", str(src_file)],
+             env=env_for(fake_home), cwd=proj, input_text="p\nc\nq\n")
+    combined2 = r2.stdout + r2.stderr
+    assert r2.returncode == 0, combined2
+    assert "(1) CLAUDE.md" in r2.stdout
+    assert "- inline; project-wide" in r2.stdout
+    assert "(q) quit" in r2.stdout
+    assert "- exit without changing anything" in r2.stdout
+    assert "quit; nothing written" in combined2
+
+    r3 = run(["--interactive", "--source", str(src_file)],
+             env=env_for(fake_home), cwd=proj, input_text="p\nj\nq\n")
+    combined3 = r3.stdout + r3.stderr
+    assert r3.returncode == 0, combined3
+    assert "Proceed? [y/N] (q quits)" in r3.stdout
+    assert "quit; nothing written" in combined3

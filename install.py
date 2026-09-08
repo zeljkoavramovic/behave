@@ -1429,14 +1429,21 @@ class StdinReader(object):
         return item.decode("utf-8", "replace").rstrip("\r\n")
 
 
+class QuitTUI(Exception):
+    pass
+
+
 def _inp(reader, prompt):
     if prompt:
         print(prompt, end="")
         sys.stdout.flush()
-    return reader.readline()
+    ans = reader.readline()
+    if ans.strip().lower() in ("q", "quit"):
+        raise QuitTUI()
+    return ans
 
 
-def _confirm(reader, assume_yes, prompt="Proceed? [y/N] "):
+def _confirm(reader, assume_yes, prompt="Proceed? [y/N] (q quits) "):
     if assume_yes:
         print("%sy (--yes)" % prompt)
         return True
@@ -1534,8 +1541,8 @@ def _pick_agents(reader, prechecked_ids):
     while True:
         ans = _inp(
             reader,
-            "Install into which agents? [1-%d] (Enter = all detected, "
-            "a = all known, l = list)\n> " % n)
+            "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
+            "Enter = all detected, a = all known, l = list, q = quit)\n> " % n)
         res = _parse_selection(ans, n)
         if res == "list":
             for i, ag in enumerate(AGENTS, 1):
@@ -1551,7 +1558,7 @@ def _pick_agents(reader, prechecked_ids):
             continue
         if res is None:
             print("not understood: use numbers (1), ranges (1-4), lists "
-                  "(1,3), a, l, or Enter")
+                  "(1,3), a, l, q, or Enter")
             continue
         return [tier1[i - 1] for i in res]
 
@@ -1627,18 +1634,19 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
           "these):" % sep)
     for num, name, desc, path, var in entries:
         tag = "[exists]" if path.exists() else "[missing]"
-        print("  %s  %-18s %-46s %s" % (num, name, desc, tag))
+        print("  (%s) %-18s - %-46s %s" % (num, name, desc, tag))
+    print("  (q) %-18s - exit without changing anything" % "quit")
     pre_map = dict((e[4], e[0]) for e in entries)
     if pre_variant and pre_variant in pre_map:
         ans = pre_map[pre_variant]
-        print("> %s (pre-selected via flags)" % ans)
+        print("> (%s) (pre-selected via flags)" % ans)
         return pre_variant
     while True:
         ans = _inp(reader, "> ").strip()
         for num, name, desc, path, var in entries:
-            if ans == num:
+            if ans.strip("()") == num:
                 return var
-        print("  pick 1-4")
+        print("  pick 1-4 (q quits)")
 
 
 def _tui_pick_family(reader, forced=None):
@@ -1656,6 +1664,7 @@ def _tui_pick_family(reader, forced=None):
     print("  (j)ust copy - write BEHAVE.md here; nothing else is touched; "
           "use it however you like")
     print("                (not tracked by --remove).")
+    print("  (q)uit      - exit without changing anything")
     while True:
         ans = _inp(reader, "> ").strip().lower()
         if ans in ("a", "agents.md", "agents"):
@@ -1666,7 +1675,7 @@ def _tui_pick_family(reader, forced=None):
             return "g"
         if ans in ("j", "just copy", "copy"):
             return "j"
-        print("  answer a, c, g or j")
+        print("  answer a, c, g, j or q")
 
 
 def _tui_project(args, reader, source, pre_variant):
@@ -1738,7 +1747,7 @@ def _tui_project(args, reader, source, pre_variant):
                 confirm=lambda: _confirm(
                     reader, args.yes,
                     "existing BEHAVE.md differs from the source; "
-                    "overwrite? [y/N] "))
+                    "overwrite? [y/N] (q quits) "))
             print("  ok    plain copy %s (%s)" % (t["path"], status))
             print("  Plain copies are yours: not tracked by --remove.")
             results.append({"agent": "", "target": t["path"].as_posix(),
@@ -1772,7 +1781,7 @@ def _tui_remove(args, reader):
     for f in findings:
         print("  %-40s (%s; %s)" % (str(f["path"]), f["agent"], f["mode"]))
     print()
-    if not _confirm(reader, args.yes, "Remove these? [y/N] "):
+    if not _confirm(reader, args.yes, "Remove these? [y/N] (q quits) "):
         print("aborted; nothing removed")
         return 0
     results = execute_removal(findings, args.block_id)
@@ -1792,6 +1801,10 @@ def run_tui(args, zero_args=False):
         return 1
     try:
         return _tui_flow(args, reader)
+    except QuitTUI:
+        print()
+        print("quit; nothing written")
+        return 0
     except EOFError:
         print()
         print("aborted: no input available; nothing written")
@@ -1816,6 +1829,7 @@ def _tui_flow(args, reader):
         print("Where should the rules apply?")
         print("  (u)ser    - all your projects, into the agents you pick")
         print("  (p)roject - this directory only (cwd: %s)" % Path.cwd())
+        print("  (q)uit    - exit without changing anything")
         while True:
             a = _inp(reader, "> ").strip().lower()
             if a in ("u", "user"):
@@ -1824,7 +1838,7 @@ def _tui_flow(args, reader):
             if a in ("p", "proj", "project"):
                 pre_scope = "project"
                 break
-            print("  answer u or p")
+            print("  answer u, p or q")
     if pre_scope == "user":
         return _tui_user(args, reader, source)
     pre_variant = ("local" if pre_scope == "local" else args.claude_variant)
