@@ -285,3 +285,67 @@ def test_sha256_with_local_source_errors(run, env_for, fake_home, proj,
     assert "only to URL sources" in combined
     assert not (fake_home / ".codex").exists()
     assert not (proj / "AGENTS.md").exists()
+
+
+# P5.2: piped stdin -> the arrow-key widget never engages; a scripted
+# session through THREE prompts (scope, agent picker, confirm) behaves
+# exactly like the numbered menu always did: numbered wording present,
+# zero ANSI escapes, typed answers accepted at every prompt
+def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home, input_text="u\n1\ny\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    # the three prompts, numbered wording intact
+    assert "Where should the rules apply?" in r.stdout
+    assert "answer u, p or q" not in r.stdout  # first answer was valid
+    assert "Install into which agents? [1-9]" in r.stdout
+    assert "Enter = all detected" in r.stdout
+    assert "Proceed? [y/N] (q quits)" in r.stdout
+    # widget-only strings must not appear on the pipe path
+    assert "Space toggles" not in r.stdout
+    assert "typed numbers / a / l / q still work" not in r.stdout
+    # no ANSI escape sequences anywhere (widget redraw is the only emitter)
+    assert "\x1b[" not in r.stdout
+    assert "Traceback" not in combined
+    # the typed "1" went through the numbered grammar: claude-code drop
+    drop = fake_home / ".claude" / "rules" / "behave.md"
+    assert drop.is_file()
+    assert drop.read_bytes().startswith(MARKER)
+
+
+# P5.2: the pure key decoders (ANSI escape bytes -> key names;
+# msvcrt.getwch char -> key name) exercised via a subprocess that
+# imports install.py - process isolation preserved, no test backdoors
+def test_widget_key_decoders_pure():
+    code = (
+        "import install as I\n"
+        "assert I._decode_key_bytes(b'\\x1b[A\\x1b[B') == (['up', 'down'], b'')\n"
+        "assert I._decode_key_bytes(b'\\x1b[1~x') == (['home', 'x'], b'')\n"
+        "assert I._decode_key_bytes(b'\\x1b[4~\\x1b[3~') == "
+        "(['end', 'delete'], b'')\n"
+        "assert I._decode_key_bytes(b'\\x1b[1;5A') == (['up'], b'')\n"
+        "assert I._decode_key_bytes(b'\\x1bx') == (['esc', 'x'], b'')\n"
+        "assert I._decode_key_bytes(b'\\x1b') == ([], b'\\x1b')\n"
+        "assert I._decode_key_bytes(b'\\x1b[') == ([], b'\\x1b[')\n"
+        "assert I._decode_key_bytes(b'\\r\\x7f \\x04') == "
+        "(['enter', 'backspace', 'space', 'eof'], b'')\n"
+        "assert I._wch_key('\\r') == 'enter'\n"
+        "assert I._wch_key(' ') == 'space'\n"
+        "assert I._wch_key('\\b') == 'backspace'\n"
+        "assert I._wch_key('\\x1b') == 'esc'\n"
+        "assert I._wch_key('\\x03') == 'interrupt'\n"
+        "assert I._wch_key('q') == 'q'\n"
+        "print('decoders-ok')\n"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "decoders-ok" in r.stdout

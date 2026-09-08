@@ -1374,6 +1374,23 @@ class StdinReader(object):
     _enter_buffered_busy ... possibly due to daemon threads" followed by
     a segfault (observed on Windows/mintty).  os.read() owns no io lock,
     so a thread blocked in it at exit is harmless.
+
+    P5.2 (TUI rung 2, the arrow-key widget) reconciliation of the
+    single-consumer rule with per-key reading: the widget READS THROUGH
+    THIS SAME THREAD ("takes over stdin entirely" is impossible here -
+    a thread already blocked inside a read cannot be cancelled, and the
+    zero-arg EOF probe starts the thread before any prompt exists).  So
+    _setup_raw_source() switches THIS thread's key source at
+    construction time when stdin is a real TTY/console: termios cbreak
+    + os.read(fd, 1) per key on POSIX, msvcrt.getwch inside the thread
+    on a real Windows console (os.read on a console returns cooked
+    lines only after Enter).  In that raw mode the thread queues decoded
+    KEY EVENTS (_decode_key_bytes / _wch_key) instead of lines;
+    readline() assembles lines from the same events, echoing manually
+    because cbreak/getwch disable terminal echo.  Non-TTY stdin (pipes,
+    CI, NUL, the mintty pty) keeps the plain os.read byte loop below
+    byte-identical - the EOF-probe semantics the zero-arg run depends
+    on - and the widget never engages there: the numbered prompt stays.
     """
 
     def __init__(self, probe_timeout=None):
@@ -1383,6 +1400,10 @@ class StdinReader(object):
         self._probe_eof = False
         self._first = None
         self._pushback = None
+        self._raw = False           # P5.2: per-key source active (widget-capable)
+        self._getwch = None         # real Windows console: msvcrt.getwch
+        self._restore_attrs = None  # POSIX cbreak: (fd, attrs) to restore
+        self._raw_eof = False       # raw source saw EOF (readline bookkeeping)
         try:
             fd = sys.stdin.fileno()
         except (AttributeError, OSError, ValueError):
@@ -1392,6 +1413,10 @@ class StdinReader(object):
             self._probe_eof = True
             self._thread = None
             return
+        # P5.2: the key source must be chosen BEFORE the thread starts;
+        # once its first read is blocking it cannot be cancelled or
+        # switched from a prompt.
+        self._setup_raw_source(fd)
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         if probe_timeout is not None:
@@ -1400,6 +1425,46 @@ class StdinReader(object):
                 if self._first in (None, b""):
                     self._probe_eof = True
             # else: read still blocking -> interactive terminal -> TUI
+
+    def _setup_raw_source(self, fd):
+        """Switch this reader's thread to a per-key source, real TTYs only.
+
+        POSIX real TTY -> termios cbreak (ICANON and ECHO cleared, ISIG
+        kept so Ctrl-C still works), restored by restore().  Windows REAL
+        console (kernel32 GetConsoleMode accepts the stdin handle - pipes
+        and the mintty pty fail this check, which is the desired safe
+        fallback) -> msvcrt.getwch inside the thread: os.read on a
+        console returns cooked lines only after Enter.  Any failure in
+        here leaves the plain os.read byte loop in charge and disables
+        the widget for the whole run - the numbered prompt is the
+        contract; never crash, never hang.
+        """
+        try:
+            if not os.isatty(fd):
+                return  # pipe / NUL / pty: probe + line semantics must stay
+            if os.name == "nt":
+                import ctypes
+                import msvcrt
+                mode = ctypes.c_uint32()
+                handle = msvcrt.get_osfhandle(fd)
+                if not ctypes.windll.kernel32.GetConsoleMode(
+                        handle, ctypes.byref(mode)):
+                    return  # not a real console (mintty pty, pipe, redirect)
+                self._getwch = msvcrt.getwch
+            else:
+                import termios
+                attrs = termios.tcgetattr(fd)
+                raw = list(attrs)
+                raw[3] = raw[3] & ~(termios.ICANON | termios.ECHO)
+                termios.tcsetattr(fd, termios.TCSANOW, raw)
+                self._restore_attrs = (fd, attrs)
+            self._raw = True
+        except Exception:
+            # Raw mode is an opt-in enhancement, never a requirement:
+            # on any failure the numbered menu serves this run instead.
+            self._getwch = None
+            self._restore_attrs = None
+            self._raw = False
 
     def _read_byte(self, fd):
         if self._pushback is not None:
@@ -1411,6 +1476,14 @@ class StdinReader(object):
         fd = self._fd
         if fd is None:
             self._queue.put(None)
+            return
+        if self._raw:
+            # Per-key source (real TTY/console only) - see class docstring.
+            getwch = self._getwch
+            if getwch is not None:
+                self._run_keys_console(getwch)
+            else:
+                self._run_keys_tty(fd)
             return
         pending = b""
         while True:
@@ -1452,11 +1525,138 @@ class StdinReader(object):
     def probe_saw_eof(self):
         return self._probe_eof
 
-    def readline(self):
-        item = self._queue.get()
-        if item is None:
+    def _run_keys_console(self, getwch):
+        """Per-key loop for a real Windows console: msvcrt.getwch runs on
+        THIS thread (the single stdin consumer); os.read would block
+        until Enter because the console hands it cooked lines only.
+        Special keys arrive as a \\x00/\\xe0 prefix plus a code byte."""
+        codes = {"H": "up", "P": "down", "K": "left", "M": "right",
+                 "G": "home", "O": "end", "S": "delete"}
+        while True:
+            try:
+                ch = getwch()
+            except Exception:
+                ch = "\x1a"
+            if self._first is None:
+                self._first = b"" if ch == "\x1a" else b"x"
+            if ch == "\x1a":  # Ctrl-Z: the console's EOF gesture
+                self._queue.put(None)
+                return
+            if ch in ("\x00", "\xe0"):
+                try:
+                    code = getwch()
+                except Exception:
+                    self._queue.put(None)
+                    return
+                if codes.get(code):
+                    self._queue.put(codes[code])
+                continue
+            self._queue.put(_wch_key(ch))
+
+    def _run_keys_tty(self, fd):
+        """Per-key loop for a real POSIX TTY in cbreak: os.read(fd, 1)
+        returns each key press unechoed.  Escape sequences are decoded
+        after the fact; a select() peek separates a lone Esc from the
+        start of a sequence (blocking for the rest of a sequence would
+        hang a lone-Esc press)."""
+        import select
+        buf = b""
+        while True:
+            try:
+                b = os.read(fd, 1)
+            except Exception:
+                b = b""
+            if self._first is None:
+                self._first = b
+            if b == b"":
+                self._queue.put(None)
+                return
+            buf = buf + b
+            events, rest = _decode_key_bytes(buf)
+            for ev in events:
+                if ev == "eof":  # Ctrl-D byte: cbreak delivers it as data
+                    self._queue.put(None)
+                    return
+                self._queue.put(ev)
+            buf = rest
+            if buf.startswith(b"\x1b"):
+                ready, _, _ = select.select([fd], [], [], 0.05)
+                if not ready:
+                    # Nothing followed within 50 ms: treat as a lone Esc
+                    # and drop the unfinished sequence - re-delivering its
+                    # bytes as text would corrupt typed input.
+                    self._queue.put("esc")
+                    buf = b""
+
+    def raw_keys(self):
+        """True when this reader produces per-key events, i.e. stdin was
+        a real TTY/console at construction and raw mode held - the only
+        condition under which the arrow-key widget may engage."""
+        return self._raw
+
+    def read_key(self):
+        """Next key event for the widget; produced by the same daemon
+        thread that serves readline() (the 5.2.2 rule: the widget reads
+        through the StdinReader, never around it)."""
+        if self._raw_eof:
             raise EOFError("stdin is closed")
-        return item.decode("utf-8", "replace").rstrip("\r\n")
+        ev = self._queue.get()
+        if ev is None:
+            self._raw_eof = True
+            raise EOFError("stdin is closed")
+        return ev
+
+    def restore(self):
+        """Undo the cbreak switch (POSIX).  run_tui() calls this in a
+        finally so the user's terminal is ALWAYS left cooked, whatever
+        way the TUI exits."""
+        saved = self._restore_attrs
+        self._restore_attrs = None
+        if saved is None:
+            return
+        fd, attrs = saved
+        try:
+            import termios
+            termios.tcsetattr(fd, termios.TCSAFLUSH, attrs)
+        except Exception as exc:
+            err("could not restore terminal mode: %s" % exc)
+
+    def readline(self):
+        if not self._raw:
+            item = self._queue.get()
+            if item is None:
+                raise EOFError("stdin is closed")
+            return item.decode("utf-8", "replace").rstrip("\r\n")
+        # Raw source: assemble a line from key events.  cbreak/getwch
+        # disable terminal echo, so typing is echoed here, including
+        # backspace; 'q'/'quit' handling stays in _inp, as before.
+        buf = ""
+        while True:
+            if self._raw_eof:
+                raise EOFError("stdin is closed")
+            ev = self._queue.get()
+            if ev is None:
+                self._raw_eof = True
+                if buf:
+                    return buf
+                raise EOFError("stdin is closed")
+            if ev == "enter":
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                return buf
+            if ev == "backspace":
+                if buf:
+                    buf = buf[:-1]
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+                continue
+            if ev == "interrupt":
+                raise KeyboardInterrupt
+            ch = " " if ev == "space" else ev
+            if isinstance(ch, str) and len(ch) == 1 and ch.isprintable():
+                buf = buf + ch
+                sys.stdout.write(ch)
+                sys.stdout.flush()
 
 
 class QuitTUI(Exception):
@@ -1514,6 +1714,262 @@ def _parse_selection(answer, n):
     return sorted(picked) if picked else None
 
 
+# ---------------------------------------------------------------------------
+# Arrow-key widget (P5.2, TUI rung 2) - stdlib only; the numbered prompt
+# stays the contract on every path (Esc, non-TTY, or any setup failure).
+# ---------------------------------------------------------------------------
+
+# Key events for the widget / raw readline, as produced by the decoders
+# below: "up" "down" "left" "right" "home" "end" "pgup" "pgdn" "delete"
+# "enter" "esc" "space" "backspace" "interrupt" "eof", or a 1-char
+# printable string (typed input).
+
+_ESC_CSI_FINAL = {
+    b"A": "up", b"B": "down", b"C": "right", b"D": "left",
+    b"H": "home", b"F": "end",
+}
+_ESC_TILDE = {
+    b"1": "home", b"3": "delete", b"4": "end", b"5": "pgup", b"6": "pgdn",
+}
+
+
+def _decode_key_bytes(data):
+    """Pure decoder: console byte stream -> (key events, undecoded tail).
+
+    Handles the ANSI grammar a terminal emits in cbreak mode: CSI
+    sequences (ESC [ params final), SS3 (ESC O final), and single bytes
+    (CR/LF -> enter, DEL/BS -> backspace, space, Ctrl-D -> eof, printable
+    ASCII -> the character itself).  The tail is returned undecoded when
+    it holds an incomplete escape sequence - the caller decides (via its
+    select peek) whether more bytes may follow or it is a lone Esc.
+    ESC followed by any other byte yields "esc" plus that byte decoded
+    on its own (the Alt-key convention).
+    """
+    events = []
+    i = 0
+    n = len(data)
+    while i < n:
+        b = data[i:i + 1]
+        if b == b"\x1b":
+            if i + 1 >= n:
+                return events, data[i:]
+            kind = data[i + 1:i + 2]
+            if kind == b"[":
+                j = i + 2
+                params = b""
+                while j < n and (data[j:j + 1].isdigit()
+                                 or data[j:j + 1] == b";"):
+                    params = params + data[j:j + 1]
+                    j += 1
+                if j >= n:
+                    return events, data[i:]  # sequence not finished yet
+                final = data[j:j + 1]
+                if params:
+                    head = params.split(b";", 1)[0]
+                    if final == b"~" and head in _ESC_TILDE:
+                        events.append(_ESC_TILDE[head])
+                    elif final in _ESC_CSI_FINAL:
+                        # modified key (ctrl/shift + arrow etc): the plain
+                        # key is the useful reading; modifiers are noise
+                        events.append(_ESC_CSI_FINAL[final])
+                elif final in _ESC_CSI_FINAL:
+                    events.append(_ESC_CSI_FINAL[final])
+                elif final == b"~":
+                    pass  # unknown tilde code: consumed, nothing to report
+                i = j + 1
+                continue
+            if kind == b"O":
+                if i + 2 >= n:
+                    return events, data[i:]
+                final = data[i + 2:i + 3]
+                if final in _ESC_CSI_FINAL:
+                    events.append(_ESC_CSI_FINAL[final])
+                i = i + 3
+                continue
+            events.append("esc")
+            i += 1  # the byte after ESC is decoded on its own pass
+            continue
+        if b in (b"\r", b"\n"):
+            events.append("enter")
+        elif b in (b"\x7f", b"\x08"):
+            events.append("backspace")
+        elif b == b" ":
+            events.append("space")
+        elif b == b"\x04":
+            events.append("eof")
+        else:
+            events.append(b.decode("latin-1"))
+        i += 1
+    return events, b""
+
+
+def _wch_key(ch):
+    """Pure decoder: one msvcrt.getwch character -> key event name."""
+    if ch in ("\r", "\n"):
+        return "enter"
+    if ch == " ":
+        return "space"
+    if ch in ("\b", "\x7f"):
+        return "backspace"
+    if ch == "\x1b":
+        return "esc"
+    if ch == "\x03":
+        return "interrupt"
+    return ch
+
+
+def _vt_ok():
+    """True when ANSI cursor sequences may drive the widget redraw.
+
+    Windows: try to enable VT processing on the console via kernel32
+    SetConsoleMode (ctypes, stdlib); the flag stays enabled for the
+    process - it only changes how the console parses our own output.
+    POSIX: a real TTY whose TERM is not empty/dumb.  On any failure or
+    non-TTY stdout the widget falls back to plain re-printing below the
+    previous block; ANSI is never emitted anywhere else.
+    """
+    try:
+        if not sys.stdout.isatty():
+            return False
+        if os.name == "nt":
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+            mode = ctypes.c_uint32()
+            if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                return False
+            enable_vt = 0x0004
+            if mode.value & enable_vt:
+                return True
+            return bool(kernel32.SetConsoleMode(
+                handle, mode.value | enable_vt))
+        return os.environ.get("TERM", "") not in ("", "dumb")
+    except Exception:
+        return False
+
+
+_MENU_AGAIN = object()  # on_text result: redisplay the widget and keep going
+
+
+def _menu_write(vt, prev_count, lines):
+    """(Re)draw the widget block - the only place ANSI escapes appear."""
+    out = sys.stdout
+    if vt and prev_count:
+        out.write("\x1b[%dA\r" % prev_count)
+    for ln in lines:
+        out.write(ln + ("\x1b[K\n" if vt else "\n"))
+    out.flush()
+
+
+def _menu_block(title, rows, pos, checked, multi, footer, buf, status):
+    """The widget's rendered lines: title, item rows with a '>' cursor
+    (and [x]/[ ] marks in multi mode), footer, and one status/typed
+    line - raw mode has no terminal echo, so the typed buffer must be
+    visible here."""
+    lines = list(title)
+    for i, row in enumerate(rows):
+        parts = row.split("\n")
+        lead = ">" if i == pos else " "
+        if multi:
+            lines.append("%s [%c] %s" % (lead, "x" if checked[i] else " ",
+                                         parts[0]))
+        else:
+            lines.append("%s %s" % (lead, parts[0]))
+        for extra in parts[1:]:
+            lines.append("  " + extra)
+    if footer:
+        lines.append(footer)
+    tail = status or ("typed: " + buf if buf else "")
+    if tail:
+        lines.append("  " + tail)
+    return lines
+
+
+def _arrow_menu(reader, title, rows, multi=False, checked=(),
+                footer="", on_text=None, empty_msg=None):
+    """The rung-2 menu widget: same items as the numbered prompt, plus a
+    cursor.  Up/Down move, Space toggles [x] (multi), Enter accepts,
+    Backspace edits, printable keys build a typed buffer submitted to
+    on_text on Enter (the prompt's EXISTING answer grammar - numbered
+    input is never removed), Esc abandons the widget for this one
+    question so the caller re-asks via the numbered prompt.  All keys
+    come from reader.read_key(): the StdinReader thread stays the single
+    stdin consumer (5.2.2 - see its docstring).
+
+    Returns ("done", value): the cursor index (single choice), the
+    checked bool list (multi), or on_text's value for a typed buffer;
+    or ("esc", None)."""
+    vt = _vt_ok()
+    pos = 0
+    checked = list(checked) if multi else []
+    buf = ""
+    status = ""
+    prev = 0
+    while True:
+        block = _menu_block(title, rows, pos, checked, multi, footer,
+                            buf, status)
+        _menu_write(vt, prev, block)
+        prev = len(block)
+        key = reader.read_key()
+        if key == "up":
+            pos = (pos - 1) % len(rows)
+        elif key == "down":
+            pos = (pos + 1) % len(rows)
+        elif key == "enter":
+            if buf:
+                value = on_text(buf) if on_text is not None else buf
+                if value is _MENU_AGAIN:
+                    buf = ""
+                    status = ""
+                    prev = 0  # on_text printed below the block: full redraw
+                    continue
+                return ("done", value)
+            if multi and not any(checked):
+                status = empty_msg or "nothing is checked"
+                continue
+            if multi:
+                return ("done", checked)
+            return ("done", pos)
+        elif key == "esc":
+            return ("esc", None)
+        elif key == "backspace":
+            if buf:
+                buf = buf[:-1]
+                status = ""
+        elif key == "interrupt":
+            raise KeyboardInterrupt
+        elif key == "space":
+            if multi:
+                checked[pos] = not checked[pos]
+                status = ""
+            # single-choice answers never contain a space; drop it
+        elif isinstance(key, str) and len(key) == 1 and key.isprintable():
+            buf = buf + key
+            status = ""
+        # every other event (left/right/home/end/...) is a no-op here
+
+
+def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text):
+    """Single-choice widget shared by the scope/family/variant prompts:
+    Up/Down + Enter picks a row; typed buffers go through parse_text -
+    the prompt's existing acceptance grammar (returns the answer, None
+    when not a valid answer yet, raises QuitTUI for q/quit).  Returns
+    None when the user pressed Esc: the caller falls back to the
+    numbered prompt for this one question."""
+    def on_text(buf):
+        value = parse_text(buf)
+        if value is None:
+            print(invalid_msg)
+            return _MENU_AGAIN
+        return value
+
+    kind, value = _arrow_menu(reader, title, rows, footer=footer,
+                              on_text=on_text)
+    if kind == "esc":
+        return None
+    return value
+
+
 def _target_label(t):
     if t["shared"]:
         return "Codex / OpenCode / Pi / Devin / Cursor"
@@ -1565,9 +2021,65 @@ def _summary_after_install(results, targets, project_dir, block_id,
         say("Re-run to update; python install.py --remove to uninstall.")
 
 
+def _pick_agents_widget(reader, tier1, prechecked_ids):
+    """Multi-select widget for the agent picker.  The [x] rows start as
+    the detection-derived pre-checks; Enter with an empty buffer submits
+    exactly the checked rows, and typed buffers go through the same
+    _parse_selection grammar as the numbered prompt (a/all, l/list,
+    numbers/ranges/lists, q/quit).  Returns None when the user pressed
+    Esc: the caller re-asks this one question via the numbered prompt."""
+    pre = set(prechecked_ids)
+    rows = [DISPLAY[a] for a in tier1]
+    checked = [a in pre for a in tier1]
+
+    def on_text(buf):
+        if buf.strip().lower() in ("q", "quit"):
+            raise QuitTUI()
+        res = _parse_selection(buf, len(tier1))
+        if res == "list":
+            for i, ag in enumerate(AGENTS, 1):
+                print("  %2d  %s" % (i, ag["id"]))
+            return _MENU_AGAIN
+        if res == "all":
+            return list(tier1)
+        if res == "default":
+            if pre:
+                return [a for a in tier1 if a in pre]
+            print("nothing is pre-checked (no supported agents detected); "
+                  "pick numbers or 'a'")
+            return _MENU_AGAIN
+        if res is None:
+            print("not understood: use numbers (1), ranges (1-4), lists "
+                  "(1,3), a, l, q, or Enter")
+            return _MENU_AGAIN
+        return [tier1[i - 1] for i in res]
+
+    kind, value = _arrow_menu(
+        reader,
+        ["Install into which agents?  (Space toggles [x]; Enter = the "
+         "checked items;",
+         "typed numbers / a / l / q still work; Esc = the numbered "
+         "prompt)"],
+        rows, multi=True, checked=checked,
+        footer="  or type 1-%d, ranges (4-7), lists (2,5), a, l, q + Enter"
+               % len(tier1),
+        on_text=on_text,
+        empty_msg="nothing is checked: Space toggles rows, or type 'a' + "
+                  "Enter for all")
+    if kind == "esc":
+        return None
+    if isinstance(value, list) and value and isinstance(value[0], bool):
+        return [a for a, c in zip(tier1, value) if c]
+    return value
+
+
 def _pick_agents(reader, prechecked_ids):
     tier1 = list(TIER1_ORDER)
     n = len(tier1)
+    if reader.raw_keys():
+        chosen = _pick_agents_widget(reader, tier1, prechecked_ids)
+        if chosen is not None:
+            return chosen
     while True:
         ans = _inp(
             reader,
@@ -1658,19 +2170,51 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
          "drop behave.md; same tier as 1/2; cleanest removal",
          project_dir / ".claude" / "rules" / "behave.md", "rules"),
     ]
-    print("Which Claude file? Official load order (higher = read earlier "
-          "each session;")
-    print("managed policy and your ~/.claude%sCLAUDE.md come before all of "
-          "these):" % sep)
-    for num, name, desc, path, var in entries:
-        tag = "[exists]" if path.exists() else "[missing]"
-        print("  (%s) %-18s - %-46s %s" % (num, name, desc, tag))
-    print("  (q) %-18s - exit without changing anything" % "quit")
+
+    def print_menu():
+        print("Which Claude file? Official load order (higher = read "
+              "earlier each session;")
+        print("managed policy and your ~/.claude%sCLAUDE.md come before all "
+              "of these):" % sep)
+        for num, name, desc, path, var in entries:
+            tag = "[exists]" if path.exists() else "[missing]"
+            print("  (%s) %-18s - %-46s %s" % (num, name, desc, tag))
+        print("  (q) %-18s - exit without changing anything" % "quit")
+
     pre_map = dict((e[4], e[0]) for e in entries)
     if pre_variant and pre_variant in pre_map:
+        print_menu()
         ans = pre_map[pre_variant]
         print("> (%s) (pre-selected via flags)" % ans)
         return pre_variant
+    if reader.raw_keys():
+        rows = []
+        for num, name, desc, path, var in entries:
+            tag = "[exists]" if path.exists() else "[missing]"
+            rows.append("(%s) %-18s - %-46s %s" % (num, name, desc, tag))
+
+        def parse_text(buf):
+            s = buf.strip()
+            if s.lower() in ("q", "quit"):
+                raise QuitTUI()
+            for num, name, desc, path, var in entries:
+                if s.strip("()") == num:
+                    return var
+            return None
+
+        var = _widget_choice(
+            reader,
+            ["Which Claude file? Official load order (higher = read "
+             "earlier each session;",
+             "managed policy and your ~/.claude%sCLAUDE.md come before "
+             "all of these):" % sep],
+            rows,
+            footer="  (q) quit - exit without changing anything",
+            invalid_msg="  pick 1-4 (q quits)",
+            parse_text=parse_text)
+        if var is not None:
+            return var
+    print_menu()
     while True:
         ans = _inp(reader, "> ").strip()
         for num, name, desc, path, var in entries:
@@ -1682,6 +2226,42 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
 def _tui_pick_family(reader, forced=None):
     if forced:
         return forced
+
+    def parse_text(buf):
+        ans = buf.strip().lower()
+        if ans in ("q", "quit"):
+            raise QuitTUI()
+        if ans in ("a", "agents.md", "agents"):
+            return "a"
+        if ans in ("c", "claude.md", "claude"):
+            return "c"
+        if ans in ("g", "gemini.md", "gemini"):
+            return "g"
+        if ans in ("j", "just copy", "copy"):
+            return "j"
+        return None
+
+    rows = [
+        "(a)gents.md - one marked block at the TOP of AGENTS.md "
+        "(created if missing).\n"
+        "                Serves Codex + OpenCode + Pi + Devin + Cursor "
+        "+ every other AGENTS.md reader in this repo.\n"
+        "                Same consent wording: block first, your own "
+        "instructions after - yours keep more weight.",
+        "(c)laude.md - the Claude Code family; pick the exact file next.",
+        "(g)emini.md - GEMINI.md (Gemini CLI reads ONLY this name).",
+        "(j)ust copy - write BEHAVE.md here; nothing else is touched; "
+        "use it however you like\n"
+        "                (not tracked by --remove).",
+    ]
+    if reader.raw_keys():
+        fam = _widget_choice(
+            reader, ["Which family?"], rows,
+            footer="  (q)uit      - exit without changing anything",
+            invalid_msg="  answer a, c, g, j or q",
+            parse_text=parse_text)
+        if fam is not None:
+            return fam
     print("Which family?")
     print("  (a)gents.md - one marked block at the TOP of AGENTS.md "
           "(created if missing).")
@@ -1839,6 +2419,15 @@ def run_tui(args, zero_args=False):
         print()
         print("aborted: no input available; nothing written")
         return 1
+    except KeyboardInterrupt:
+        # Ctrl-C: ISIG still delivers the signal on POSIX cbreak; the
+        # Windows console path delivers it as an "interrupt" key event.
+        print()
+        print("interrupted; nothing written")
+        return 1
+    finally:
+        # P5.2: leave a cbreak'd terminal cooked on EVERY exit path.
+        reader.restore()
 
 
 def _tui_flow(args, reader):
@@ -1855,20 +2444,43 @@ def _tui_flow(args, reader):
     if args.scope in ("user", "project", "local"):
         pre_scope = args.scope
     if pre_scope is None:
-        print()
-        print("Where should the rules apply?")
-        print("  (u)ser    - all your projects, into the agents you pick")
-        print("  (p)roject - this directory only (cwd: %s)" % Path.cwd())
-        print("  (q)uit    - exit without changing anything")
-        while True:
-            a = _inp(reader, "> ").strip().lower()
-            if a in ("u", "user"):
-                pre_scope = "user"
-                break
-            if a in ("p", "proj", "project"):
-                pre_scope = "project"
-                break
-            print("  answer u, p or q")
+        if reader.raw_keys():
+
+            def parse_scope(buf):
+                a = buf.strip().lower()
+                if a in ("q", "quit"):
+                    raise QuitTUI()
+                if a in ("u", "user"):
+                    return "user"
+                if a in ("p", "proj", "project"):
+                    return "project"
+                return None
+
+            scope = _widget_choice(
+                reader,
+                ["Where should the rules apply?"],
+                ["(u)ser    - all your projects, into the agents you pick",
+                 "(p)roject - this directory only (cwd: %s)" % Path.cwd()],
+                footer="  (q)uit    - exit without changing anything",
+                invalid_msg="  answer u, p or q",
+                parse_text=parse_scope)
+            if scope is not None:
+                pre_scope = scope
+        if pre_scope is None:
+            print()
+            print("Where should the rules apply?")
+            print("  (u)ser    - all your projects, into the agents you pick")
+            print("  (p)roject - this directory only (cwd: %s)" % Path.cwd())
+            print("  (q)uit    - exit without changing anything")
+            while True:
+                a = _inp(reader, "> ").strip().lower()
+                if a in ("u", "user"):
+                    pre_scope = "user"
+                    break
+                if a in ("p", "proj", "project"):
+                    pre_scope = "project"
+                    break
+                print("  answer u, p or q")
     if pre_scope == "user":
         return _tui_user(args, reader, source)
     pre_variant = ("local" if pre_scope == "local" else args.claude_variant)
