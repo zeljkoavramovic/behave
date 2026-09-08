@@ -299,7 +299,7 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     # the three prompts, numbered wording intact
     assert "Where should the rules apply?" in r.stdout
     assert "answer u, p or q" not in r.stdout  # first answer was valid
-    assert "Install into which agents? [1-21]" in r.stdout
+    assert "Install into which agents? [1-22]" in r.stdout
     assert "Enter = all detected" in r.stdout
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
@@ -494,5 +494,17 @@ def test_warp_list_install_support(run, env_for, fake_home):
     assert r.returncode == 0, r.stdout + r.stderr
     lines = [ln for ln in r.stdout.splitlines()
              if ln.strip().split() and ln.strip().split()[0] == "warp"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]
+
+
+# Phase 3.1 (junie): promoted agent - --list shows junie detected
+# without the "(no install support)" note
+def test_junie_list_install_support(run, env_for, fake_home):
+    (fake_home / ".junie").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] == "junie"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]

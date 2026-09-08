@@ -132,7 +132,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 3, "flags": ()},
     {"id": "inference-sh", "env": None, "markers": [("h", ".inferencesh")], "tier": 3, "flags": ()},
     {"id": "jazz", "env": None, "markers": [("h", ".jazz"), ("c", ".jazz")], "tier": 3, "flags": ()},
-    {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 2, "flags": ()},
+    {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
     {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ()},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
     {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
@@ -185,14 +185,15 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
-    "amp", "goose", "zed", "openhands", "warp",
+    "amp", "goose", "zed", "openhands", "warp", "junie",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
 # scope installs ONE shared ./AGENTS.md block for all of them.
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush", "amp", "goose", "zed", "openhands", "warp"]
+              "crush", "amp", "goose", "zed", "openhands", "warp",
+              "junie"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -215,6 +216,7 @@ DISPLAY = {
     "zed": "Zed",
     "openhands": "OpenHands",
     "warp": "Warp",
+    "junie": "Junie",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -929,6 +931,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["warp"], home_base() / ".agents" / "AGENTS.md",
                     "inline"))
+            elif a == "junie":
+                # documented for Junie CLI (%USERPROFILE%\.junie\AGENTS.md);
+                # the IDE plugin loads project scope only - caveat
+                # documented in TODO-LEFT findings. Project scope rides
+                # the shared ./AGENTS.md family block, NOT
+                # .junie/AGENTS.md: that file is EXCLUSIVE and would
+                # suppress the root AGENTS.md + playbook + rules.
+                targets.append(_mk_target(
+                    ["junie"], home_base() / ".junie" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1134,6 +1146,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".agents" / "skills" / "behave.md", "drop",
             ["openhands"], drop_agent="openhands")
         add(home_base() / ".agents" / "AGENTS.md", "inline", ["warp"])
+        add(home_base() / ".junie" / "AGENTS.md", "inline", ["junie"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

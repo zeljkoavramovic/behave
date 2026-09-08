@@ -498,3 +498,53 @@ def test_warp_project_shared_agents_md(run, env_for, fake_home, proj,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (junie): user-scope inline block at the top of
+# ~/.junie/AGENTS.md (documented for the Junie CLI)
+def test_junie_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "junie", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".junie" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (junie): a pre-existing ~/.junie/AGENTS.md keeps its content
+# below the newly prepended block
+def test_junie_user_inline_preserves_existing(run, env_for, fake_home,
+                                              src_file):
+    target = fake_home / ".junie" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "junie", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (junie): project scope with only junie selected rides the
+# shared ./AGENTS.md family block (.junie/AGENTS.md is exclusive in
+# project scope and would suppress the root AGENTS.md - never written)
+def test_junie_project_shared_agents_md(run, env_for, fake_home, proj,
+                                        src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "junie", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--json", "--source", str(src_file)],
+            env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "junie" in served
+    assert "codex" in served  # the shared block, not a junie-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert not (proj / ".junie" / "AGENTS.md").exists()
