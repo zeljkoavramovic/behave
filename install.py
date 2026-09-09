@@ -167,7 +167,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
-    {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 3, "flags": ("multi",)},
+    {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ("multi",)},
     {"id": "zencoder", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
     {"id": "zenflow", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
     {"id": "neovate", "env": None, "markers": [("h", ".neovate")], "tier": 3, "flags": ()},
@@ -186,6 +186,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
+    "zcode",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -193,7 +194,7 @@ TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
-              "junie", "posit-assistant"]
+              "junie", "posit-assistant", "zcode"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -218,6 +219,7 @@ DISPLAY = {
     "warp": "Warp",
     "junie": "Junie",
     "posit-assistant": "Posit Assistant",
+    "zcode": "ZCode",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -952,6 +954,15 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["posit-assistant"],
                     home_base() / ".posit" / "assistant" / "AGENTS.md",
                     "inline"))
+            elif a == "zcode":
+                # zcode reads ~/.zcode/AGENTS.md at task start (appended
+                # first into the prompt); the /Applications/ZCode.app
+                # registry marker is presence-only detection (the app
+                # bundle loads no rules file) - ~/.zcode is the single
+                # user target.
+                targets.append(_mk_target(
+                    ["zcode"], home_base() / ".zcode" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1160,6 +1171,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".junie" / "AGENTS.md", "inline", ["junie"])
         add(home_base() / ".posit" / "assistant" / "AGENTS.md", "inline",
             ["posit-assistant"])
+        add(home_base() / ".zcode" / "AGENTS.md", "inline", ["zcode"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
