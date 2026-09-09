@@ -2127,7 +2127,8 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
     line - raw mode has no terminal echo, so the typed buffer must be
     visible here."""
     # (owner, canary round 3 follow-up) Precompute items and width
-    # so every VT-cursor bar pads to the widest row line in this menu
+    # so every VT-cursor bar pads one space past the widest row line
+    # in this menu
     items = []
     width = 0
     for i, row in enumerate(rows):
@@ -2141,7 +2142,7 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
         for extra in parts[1:]:
             item.append("  " + extra)
         items.append(item)
-        width = max(width, max(len(ln) for ln in item))
+        width = max(width, max(len(ln) for ln in item) + 1)
     lines = list(title)
     for i, item in enumerate(items):
         if vt and i == pos:
