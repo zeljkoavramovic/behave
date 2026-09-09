@@ -136,7 +136,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ()},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
     {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
-    {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 3, "flags": ("multi",)},
+    {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ("multi",)},
     {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 3, "flags": ()},
     {"id": "kode", "env": None, "markers": [("h", ".kode")], "tier": 3, "flags": ()},
     {"id": "lingma", "env": None, "markers": [("h", ".lingma")], "tier": 3, "flags": ()},
@@ -186,7 +186,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
-    "zcode", "minimax-code", "openclaw",
+    "zcode", "minimax-code", "openclaw", "kimi-code-cli",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -194,7 +194,8 @@ TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
-              "junie", "posit-assistant", "zcode", "minimax-code"]
+              "junie", "posit-assistant", "zcode", "minimax-code",
+              "kimi-code-cli"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -222,6 +223,7 @@ DISPLAY = {
     "zcode": "ZCode",
     "minimax-code": "MiniMax Code",
     "openclaw": "OpenClaw",
+    "kimi-code-cli": "Kimi Code",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -984,6 +986,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["openclaw"],
                     home_base() / ".openclaw" / "workspace" / "AGENTS.md",
                     "inline"))
+            elif a == "kimi-code-cli":
+                # ~/.kimi-code/AGENTS.md is kimi-code's documented
+                # global memory (loadAgentsMdForRoots, default-on);
+                # the ~/.kimi marker detects the OLD Python Kimi CLI -
+                # a different tool that loads no user rules file - and
+                # stays detection-only.
+                targets.append(_mk_target(
+                    ["kimi-code-cli"],
+                    home_base() / ".kimi-code" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1200,6 +1212,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".zcode" / "AGENTS.md", "inline", ["zcode"])
         add(home_base() / ".openclaw" / "workspace" / "AGENTS.md",
             "inline", ["openclaw"])
+        add(home_base() / ".kimi-code" / "AGENTS.md", "inline",
+            ["kimi-code-cli"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
