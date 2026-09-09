@@ -90,7 +90,7 @@ DROP_CONSENT = (
 #   "f" $FLATPAK_XDG_CONFIG_HOME
 #   "c" current working directory (report-only signal)
 #   "p" absolute path (as-is)
-# flags: "cwd" (has cwd markers), "multi" (multi-marker agent),
+# flags: "cwd" (has cwd markers),
 #        "content" (package.json content check), "never" (pseudo entry),
 #        "deprecated" (report-only deprecation notice)
 AGENTS: List[Dict[str, Any]] = [
@@ -103,7 +103,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
     {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 3, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
-    {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ("multi",)},
+    {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ()},
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
     {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
@@ -136,13 +136,13 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ()},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
     {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
-    {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ("multi",)},
+    {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ()},
     {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 3, "flags": ()},
     {"id": "kode", "env": None, "markers": [("h", ".kode")], "tier": 3, "flags": ()},
     {"id": "lingma", "env": None, "markers": [("h", ".lingma")], "tier": 3, "flags": ()},
     {"id": "loaf", "env": None, "markers": [("h", ".loaf")], "tier": 3, "flags": ()},
     {"id": "mcpjam", "env": None, "markers": [("h", ".mcpjam")], "tier": 3, "flags": ()},
-    {"id": "minimax-code", "env": None, "markers": [("h", ".minimax"), ("p", "/Applications/MiniMax Code.app")], "tier": 1, "flags": ("multi",)},
+    {"id": "minimax-code", "env": None, "markers": [("h", ".minimax"), ("p", "/Applications/MiniMax Code.app")], "tier": 1, "flags": ()},
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 3, "flags": ()},
     {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
     {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
@@ -151,7 +151,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 1, "flags": ()},
     {"id": "ona", "env": None, "markers": [("h", ".ona")], "tier": 2, "flags": ()},
     {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
-    {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ("multi",)},
+    {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ()},
     {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 3, "flags": ()},
     {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 3, "flags": ()},
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 3, "flags": ()},
@@ -167,7 +167,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
-    {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ("multi",)},
+    {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ()},
     {"id": "zencoder", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
     {"id": "zenflow", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
     {"id": "neovate", "env": None, "markers": [("h", ".neovate")], "tier": 3, "flags": ()},
