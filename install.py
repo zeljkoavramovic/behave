@@ -151,7 +151,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 1, "flags": ()},
     {"id": "ona", "env": None, "markers": [("h", ".ona")], "tier": 2, "flags": ()},
     {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
-    {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 3, "flags": ("multi",)},
+    {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ("multi",)},
     {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 3, "flags": ()},
     {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 3, "flags": ()},
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 3, "flags": ()},
@@ -185,7 +185,7 @@ TIER1_ORDER = [
     "claude-code", "codex", "opencode", "devin", "cursor",
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
-    "amp", "goose", "zed", "openhands", "warp", "junie",
+    "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -193,7 +193,7 @@ TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
-              "junie"]
+              "junie", "posit-assistant"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -217,6 +217,7 @@ DISPLAY = {
     "openhands": "OpenHands",
     "warp": "Warp",
     "junie": "Junie",
+    "posit-assistant": "Posit Assistant",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -941,6 +942,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["junie"], home_base() / ".junie" / "AGENTS.md",
                     "inline"))
+            elif a == "posit-assistant":
+                # Posit Assistant reads ~/.posit/assistant/AGENTS.md as
+                # user memory (every session, no trust prompt); legacy
+                # ~/.positai is auto-migrated by the app on first
+                # launch, so the ~/.posit marker suffices - the legacy
+                # dir is never a second install target.
+                targets.append(_mk_target(
+                    ["posit-assistant"],
+                    home_base() / ".posit" / "assistant" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1147,6 +1158,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["openhands"], drop_agent="openhands")
         add(home_base() / ".agents" / "AGENTS.md", "inline", ["warp"])
         add(home_base() / ".junie" / "AGENTS.md", "inline", ["junie"])
+        add(home_base() / ".posit" / "assistant" / "AGENTS.md", "inline",
+            ["posit-assistant"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

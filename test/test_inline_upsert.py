@@ -548,3 +548,52 @@ def test_junie_project_shared_agents_md(run, env_for, fake_home, proj,
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
     assert not (proj / ".junie" / "AGENTS.md").exists()
+
+
+# Phase 3.1 (posit-assistant): user-scope inline block at the top of
+# ~/.posit/assistant/AGENTS.md (Posit Assistant user memory)
+def test_posit_assistant_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "posit-assistant", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".posit" / "assistant" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (posit-assistant): a pre-existing ~/.posit/assistant/AGENTS.md
+# keeps its content below the newly prepended block
+def test_posit_assistant_user_inline_preserves_existing(run, env_for,
+                                                         fake_home,
+                                                         src_file):
+    target = fake_home / ".posit" / "assistant" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "posit-assistant", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (posit-assistant): project scope rides the shared ./AGENTS.md
+# family block (legacy ~/.positai is never an install target)
+def test_posit_assistant_project_shared_agents_md(run, env_for, fake_home,
+                                                  proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "posit-assistant", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "posit-assistant" in served
+    assert "codex" in served  # the shared block, not a posit-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
