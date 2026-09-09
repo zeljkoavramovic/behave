@@ -2148,7 +2148,10 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     or ("esc", None)."""
     vt = _vt_ok()
     pos = 0
-    checked = list(checked) if multi else []
+    # multi: keep the CALLER's list object, not a copy - the agent
+    # picker's l-expansion mutates rows/checked in place from on_text
+    # and relies on this loop seeing the same lists next redraw.
+    checked = checked if multi else []
     buf = ""
     status = ""
     prev = 0
@@ -2196,13 +2199,23 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
         # every other event (left/right/home/end/...) is a no-op here
 
 
-def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text):
+def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
+                   row_keys):
     """Single-choice widget shared by the scope/family/variant prompts:
     Up/Down + Enter picks a row; typed buffers go through parse_text -
     the prompt's existing acceptance grammar (returns the answer, None
     when not a valid answer yet, raises QuitTUI for q/quit).  Returns
     None when the user pressed Esc: the caller falls back to the
-    numbered prompt for this one question."""
+    numbered prompt for this one question.
+
+    row_keys is parallel to rows and holds each row's canonical typed
+    answer (its (x) letter).  _arrow_menu returns the raw cursor index
+    on Enter-with-empty-buffer; mapping that index through parse_text
+    HERE means pressing Enter on a row behaves exactly like typing its
+    key - one answer grammar, two input surfaces, no second code path
+    to drift.  Before this mapping existed the raw index leaked out
+    (arrow-selecting "(u)ser" handed the caller the integer 0, which
+    never equals "user", so scope routing always fell to project)."""
     def on_text(buf):
         value = parse_text(buf)
         if value is None:
@@ -2214,6 +2227,8 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text):
                               on_text=on_text)
     if kind == "esc":
         return None
+    if isinstance(value, int):
+        value = parse_text(row_keys[value])
     return value
 
 
@@ -2270,24 +2285,46 @@ def _summary_after_install(results, targets, project_dir, block_id,
         say("Re-run to update; python install.py --remove to uninstall.")
 
 
-def _pick_agents_widget(reader, tier1, prechecked_ids):
-    """Multi-select widget for the agent picker.  The [x] rows start as
-    the detection-derived pre-checks; Enter with an empty buffer submits
-    exactly the checked rows, and typed buffers go through the same
-    _parse_selection grammar as the numbered prompt (a/all, l/list,
-    numbers/ranges/lists, q/quit).  Returns None when the user pressed
-    Esc: the caller re-asks this one question via the numbered prompt."""
+def _agent_menu_row(pos, aid, det_map):
+    d = det_map.get(aid)
+    path = str(d["paths"][0]) if d else "-"
+    return "%2d  %-17s %s" % (pos, DISPLAY[aid], path)
+
+
+def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
+    """Multi-select widget for the agent picker - and the menu itself:
+    the rows ARE the scan report (position, display name, detected
+    path or "-"), one list instead of a pre-printed scan dump plus a
+    second display-name menu.  The default view is the detected
+    agents only; typing l expands the SAME menu in place to every
+    supported agent.  visible is the caller's list and is mutated by
+    that expansion, so an Esc fallback re-asks the numbered prompt
+    over the view the user last saw (the simplest rule - no un-
+    expanding).  Enter with an empty buffer submits the checked rows;
+    typed buffers go through the same _parse_selection grammar as the
+    numbered prompt.  Returns None when the user pressed Esc."""
     pre = set(prechecked_ids)
-    rows = [DISPLAY[a] for a in tier1]
-    checked = [a in pre for a in tier1]
+    rows = [_agent_menu_row(i, a, det_map)
+            for i, a in enumerate(visible, 1)]
+    checked = [a in pre for a in visible]
+
+    def expand():
+        # in-place protocol: rows/checked/visible are rewritten, not
+        # rebound, because _arrow_menu holds these exact list objects
+        # until it returns; _MENU_AGAIN then forces its full redraw.
+        # The cursor index stays valid - the list only ever grows -
+        # though it may land on a different row after renumbering.
+        visible[:] = tier1
+        rows[:] = [_agent_menu_row(i, a, det_map)
+                   for i, a in enumerate(visible, 1)]
+        checked[:] = [a in pre for a in visible]
 
     def on_text(buf):
         if buf.strip().lower() in ("q", "quit"):
             raise QuitTUI()
-        res = _parse_selection(buf, len(tier1))
+        res = _parse_selection(buf, len(visible))
         if res == "list":
-            for i, ag in enumerate(AGENTS, 1):
-                print("  %2d  %s" % (i, ag["id"]))
+            expand()
             return _MENU_AGAIN
         if res == "all":
             return list(tier1)
@@ -2301,7 +2338,7 @@ def _pick_agents_widget(reader, tier1, prechecked_ids):
             print("not understood: use numbers (1), ranges (1-4), lists "
                   "(1,3), a, l, q, or Enter")
             return _MENU_AGAIN
-        return [tier1[i - 1] for i in res]
+        return [visible[i - 1] for i in res]
 
     kind, value = _arrow_menu(
         reader,
@@ -2310,34 +2347,47 @@ def _pick_agents_widget(reader, tier1, prechecked_ids):
          "typed numbers / a / l / q still work; Esc = the numbered "
          "prompt)"],
         rows, multi=True, checked=checked,
-        footer="  or type 1-%d, ranges (4-7), lists (2,5), a, l, q + Enter"
-               % len(tier1),
+        footer="  or type numbers (3), ranges (4-7), lists (2,5), "
+               "a, l, q + Enter",
         on_text=on_text,
         empty_msg="nothing is checked: Space toggles rows, or type 'a' + "
                   "Enter for all")
     if kind == "esc":
         return None
     if isinstance(value, list) and value and isinstance(value[0], bool):
-        return [a for a, c in zip(tier1, value) if c]
+        return [a for a, c in zip(visible, value) if c]
     return value
 
 
-def _pick_agents(reader, prechecked_ids):
+def _pick_agents(reader, prechecked_ids, det_map):
     tier1 = list(TIER1_ORDER)
-    n = len(tier1)
+    # visible is shared state: the widget's l-expansion mutates it, so
+    # the numbered fallback (Esc, non-TTY) re-asks over the CURRENT
+    # view - numbers always refer to what is on screen.
+    visible = [a for a in tier1 if a in det_map]
+    if not visible:
+        # zero detections: an empty widget would crash the cursor
+        # cycling (modulo len(rows) of zero rows) - show the full
+        # supported list instead
+        print("  no supported agents detected; showing all 27")
+        visible[:] = tier1
     if reader.raw_keys():
-        chosen = _pick_agents_widget(reader, tier1, prechecked_ids)
+        chosen = _pick_agents_widget(reader, tier1, prechecked_ids,
+                                     det_map, visible)
         if chosen is not None:
             return chosen
     while True:
+        n = len(visible)
+        for i, a in enumerate(visible, 1):
+            print("  " + _agent_menu_row(i, a, det_map))
         ans = _inp(
             reader,
             "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
-            "Enter = all detected, a = all known, l = list, q = quit)\n> " % n)
+            "Enter = checked/detected, a = all 27, l = show all, "
+            "q = quit)\n> " % n)
         res = _parse_selection(ans, n)
         if res == "list":
-            for i, ag in enumerate(AGENTS, 1):
-                print("  %2d  %s" % (i, ag["id"]))
+            visible[:] = tier1
             continue
         if res == "all":
             return list(tier1)
@@ -2351,7 +2401,7 @@ def _pick_agents(reader, prechecked_ids):
             print("not understood: use numbers (1), ranges (1-4), lists "
                   "(1,3), a, l, q, or Enter")
             continue
-        return [tier1[i - 1] for i in res]
+        return [visible[i - 1] for i in res]
 
 
 def _tui_user(args, reader, source):
@@ -2359,15 +2409,9 @@ def _tui_user(args, reader, source):
     print("Scanning for installed agents...")
     det = detect_agents()
     det_map = dict((d["id"], d) for d in det)
-    prechecked = set()
-    for i, aid in enumerate(TIER1_ORDER, 1):
-        d = det_map.get(aid)
-        detected = d is not None and not d["cwd_only"]
-        mark = "[x]" if detected else "[ ]"
-        path = str(d["paths"][0]) if d else "-"
-        print("  %s %2d  %-17s %s" % (mark, i, DISPLAY[aid], path))
-        if detected:
-            prechecked.add(aid)
+    # TIER1 agents are never cwd-flagged, so plain det_map membership
+    # is the detected test here; the agent menu below IS the report.
+    prechecked = set(aid for aid in TIER1_ORDER if aid in det_map)
     others = sorted(d["id"] for d in det
                     if d["id"] not in TIER1_SET and d["id"] != "windsurf")
     if others:
@@ -2375,13 +2419,13 @@ def _tui_user(args, reader, source):
     if "windsurf" in det_map:
         print("  windsurf is a deprecated IDE; upgrade to Devin Desktop "
               "(devin carries the install targets)")
-    print("  (%d known agents total - l lists all; unsupported ones are "
-          "reported, never installed)" % len(AGENTS))
+    print("  (%d supported agents - l shows the rest; %d known agents "
+          "total, see --list; unsupported ones are reported, never "
+          "installed)" % (len(TIER1_ORDER), len(AGENTS)))
     requested = [a for a in _parse_requested_agents(args) if a in TIER1_SET]
-    for a in requested:
-        prechecked.add(a)
+    prechecked.update(requested)
 
-    chosen = _pick_agents(reader, prechecked)
+    chosen = _pick_agents(reader, prechecked, det_map)
     if not chosen:
         print("nothing selected; nothing written")
         return 0
@@ -2438,9 +2482,13 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
         return pre_variant
     if reader.raw_keys():
         rows = []
+        keys = []
         for num, name, desc, path, var in entries:
             tag = "[exists]" if path.exists() else "[missing]"
             rows.append("(%s) %-18s - %-46s %s" % (num, name, desc, tag))
+            keys.append(num)
+        rows.append("(q) %-18s - exit without changing anything" % "quit")
+        keys.append("q")
 
         def parse_text(buf):
             s = buf.strip()
@@ -2458,9 +2506,10 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
              "managed policy and your ~/.claude%sCLAUDE.md come before "
              "all of these):" % sep],
             rows,
-            footer="  (q) quit - exit without changing anything",
+            footer="",
             invalid_msg="  pick 1-4 (q quits)",
-            parse_text=parse_text)
+            parse_text=parse_text,
+            row_keys=keys)
         if var is not None:
             return var
     print_menu()
@@ -2502,13 +2551,15 @@ def _tui_pick_family(reader, forced=None):
         "(j)ust copy - write BEHAVE.md here; nothing else is touched; "
         "use it however you like\n"
         "                (not tracked by --remove).",
+        "(q)uit      - exit without changing anything",
     ]
     if reader.raw_keys():
         fam = _widget_choice(
             reader, ["Which family?"], rows,
-            footer="  (q)uit      - exit without changing anything",
+            footer="",
             invalid_msg="  answer a, c, g, j or q",
-            parse_text=parse_text)
+            parse_text=parse_text,
+            row_keys=["a", "c", "g", "j", "q"])
         if fam is not None:
             return fam
     print("Which family?")
@@ -2709,10 +2760,12 @@ def _tui_flow(args, reader):
                 reader,
                 ["Where should the rules apply?"],
                 ["(u)ser    - all your projects, into the agents you pick",
-                 "(p)roject - this directory only (cwd: %s)" % Path.cwd()],
-                footer="  (q)uit    - exit without changing anything",
+                 "(p)roject - this directory only (cwd: %s)" % Path.cwd(),
+                 "(q)uit    - exit without changing anything"],
+                footer="",
                 invalid_msg="  answer u, p or q",
-                parse_text=parse_scope)
+                parse_text=parse_scope,
+                row_keys=["u", "p", "q"])
             if scope is not None:
                 pre_scope = scope
         if pre_scope is None:

@@ -299,8 +299,10 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     # the three prompts, numbered wording intact
     assert "Where should the rules apply?" in r.stdout
     assert "answer u, p or q" not in r.stdout  # first answer was valid
+    # zero detections in this fixture: the menu falls back to all 27
+    assert "no supported agents detected; showing all 27" in r.stdout
     assert "Install into which agents? [1-27]" in r.stdout
-    assert "Enter = all detected" in r.stdout
+    assert "Enter = checked/detected" in r.stdout
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
     assert "Space toggles" not in r.stdout
@@ -312,6 +314,160 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     drop = fake_home / ".claude" / "rules" / "behave.md"
     assert drop.is_file()
     assert drop.read_bytes().startswith(MARKER)
+
+
+# Detected-first menu: the FIRST numbered prompt covers only detected
+# agents ([1-2] here); typing l expands the SAME menu to all 27 and the
+# re-prompt reads [1-27] with non-detected rows showing "-"
+def test_agent_menu_detected_first_l_expands(run, env_for, fake_home,
+                                             src_file):
+    (fake_home / ".claude").mkdir()
+    (fake_home / ".codex").mkdir()
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home, input_text="u\nl\nq\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "Install into which agents? [1-2]" in r.stdout
+    assert "no supported agents detected" not in r.stdout
+    assert "Install into which agents? [1-27]" in r.stdout
+    # full-list positions after expansion: gemini-cli is #6, undetected
+    assert "6  Gemini CLI" in r.stdout
+    assert "quit; nothing written" in combined
+    assert "Traceback" not in combined
+
+
+# l-expansion then a full-list number installs a NON-detected agent
+# (numbers after l refer to the on-screen 27-row list)
+def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
+                                                       fake_home, src_file):
+    (fake_home / ".claude").mkdir()
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home, input_text="u\nl\n6\ny\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "Install into which agents? [1-1]" in r.stdout
+    assert "Install into which agents? [1-27]" in r.stdout
+    g = fake_home / ".gemini" / "GEMINI.md"
+    assert g.is_file()
+    assert g.read_bytes().startswith(B)
+    assert "Traceback" not in combined
+
+
+# zero detections: Enter (= default) reports nothing pre-checked and
+# re-asks; 'a' then selects all 27 (confirm declined to stay read-only)
+def test_agent_menu_zero_detections_enter_then_all(run, env_for,
+                                                   fake_home, src_file):
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home, input_text="u\n\na\nn\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "no supported agents detected; showing all 27" in r.stdout
+    assert "nothing is pre-checked" in r.stdout
+    assert "What will change" in r.stdout
+    assert "aborted; nothing written" in combined
+    assert "Traceback" not in combined
+
+
+# row_keys mapping (one answer grammar, two input surfaces): Enter on a
+# row must behave exactly like typing that row's key, for each of the
+# three single-choice prompts; plus the agents-widget l-expansion
+# protocol (rows/checked/visible mutated in place, Esc keeps the
+# expanded view).  The real widget needs a cbreak terminal, so this
+# drives the widget machinery through a fake reader in a subprocess -
+# the same process-isolation pattern as test_widget_key_decoders_pure.
+def test_widget_row_keys_map_rows_to_grammar():
+    code = (
+        "import install as I\n"
+        "class R:\n"
+        "    def __init__(self, keys):\n"
+        "        self.keys = list(keys)\n"
+        "    def read_key(self):\n"
+        "        return self.keys.pop(0)\n"
+        "def scope_grammar(buf):\n"
+        "    a = buf.strip().lower()\n"
+        "    if a in ('q', 'quit'):\n"
+        "        raise I.QuitTUI()\n"
+        "    if a in ('u', 'user'):\n"
+        "        return 'user'\n"
+        "    if a in ('p', 'proj', 'project'):\n"
+        "        return 'project'\n"
+        "    return None\n"
+        "scope_rows = ['(u)ser', '(p)roject', '(q)uit']\n"
+        "scope_keys = ['u', 'p', 'q']\n"
+        "assert I._widget_choice(R(['enter']), ['t'], scope_rows, '',\n"
+        "                        'bad', scope_grammar, scope_keys) == 'user'\n"
+        "try:\n"
+        "    I._widget_choice(R(['down', 'down', 'enter']), ['t'],\n"
+        "                     scope_rows, '', 'bad', scope_grammar,\n"
+        "                     scope_keys)\n"
+        "    raise SystemExit('scope q-row did not quit')\n"
+        "except I.QuitTUI:\n"
+        "    pass\n"
+        "assert I._widget_choice(R(['x', 'enter', 'p', 'enter']), ['t'],\n"
+        "                        scope_rows, '', 'bad', scope_grammar,\n"
+        "                        scope_keys) == 'project'\n"
+        "fam_map = {'a': 'a', 'c': 'c', 'g': 'g', 'j': 'j'}\n"
+        "def fam_grammar(buf):\n"
+        "    a = buf.strip().lower()\n"
+        "    if a == 'q':\n"
+        "        raise I.QuitTUI()\n"
+        "    return fam_map.get(a)\n"
+        "fam_rows = ['a', 'c', 'g', 'j', 'q']\n"
+        "fam_keys = ['a', 'c', 'g', 'j', 'q']\n"
+        "assert I._widget_choice(R(['down', 'enter']), ['t'], fam_rows,\n"
+        "                        '', 'bad', fam_grammar, fam_keys) == 'c'\n"
+        "try:\n"
+        "    I._widget_choice(R(['down', 'down', 'down', 'down',\n"
+        "                        'enter']), ['t'], fam_rows, '', 'bad',\n"
+        "                        fam_grammar, fam_keys)\n"
+        "    raise SystemExit('family q-row did not quit')\n"
+        "except I.QuitTUI:\n"
+        "    pass\n"
+        "var_map = {'1': 'root', '2': 'dot-claude', '3': 'local',\n"
+        "           '4': 'rules'}\n"
+        "def var_grammar(buf):\n"
+        "    s = buf.strip()\n"
+        "    if s.lower() in ('q', 'quit'):\n"
+        "        raise I.QuitTUI()\n"
+        "    return var_map.get(s.strip('()'))\n"
+        "var_rows = ['1', '2', '3', '4', 'q']\n"
+        "var_keys = ['1', '2', '3', '4', 'q']\n"
+        "assert I._widget_choice(R(['down', 'down', 'down', 'enter']),\n"
+        "                        ['t'], var_rows, '', 'bad', var_grammar,\n"
+        "                        var_keys) == 'rules'\n"
+        "try:\n"
+        "    I._widget_choice(R(['down', 'down', 'down', 'down',\n"
+        "                        'enter']), ['t'], var_rows, '', 'bad',\n"
+        "                        var_grammar, var_keys)\n"
+        "    raise SystemExit('variant q-row did not quit')\n"
+        "except I.QuitTUI:\n"
+        "    pass\n"
+        "tier1 = list(I.TIER1_ORDER)\n"
+        "det_map = {'claude-code': {'id': 'claude-code',\n"
+        "                           'paths': ['/hx/.claude']}}\n"
+        "visible = [a for a in tier1 if a in det_map]\n"
+        "chosen = I._pick_agents_widget(R(['l', 'enter', 'enter']), tier1,\n"
+        "                               {'claude-code'}, det_map, visible)\n"
+        "assert chosen == ['claude-code']\n"
+        "assert visible == tier1  # expansion mutated the shared list\n"
+        "visible2 = [a for a in tier1 if a in det_map]\n"
+        "esc = I._pick_agents_widget(R(['l', 'enter', 'esc']), tier1,\n"
+        "                            {'claude-code'}, det_map, visible2)\n"
+        "assert esc is None\n"
+        "assert visible2 == tier1  # Esc keeps the expanded view\n"
+        "print('rowkeys-ok')\n"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "rowkeys-ok" in r.stdout
 
 
 # P5.2: the pure key decoders (ANSI escape bytes -> key names;
