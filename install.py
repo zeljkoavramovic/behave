@@ -1362,9 +1362,10 @@ def build_parser():
                    help="launch the interactive TUI; other flags act as "
                         "pre-selections (--json/--quiet are ignored there)")
     p.add_argument("--ascii", action="store_true",
-                   help="force the numbered-prompt navigation (no "
-                        "arrow-key menus) even on an interactive "
-                        "terminal - easier to script")
+                   help="launch the interactive TUI with the "
+                        "numbered-prompt navigation (no arrow-key "
+                        "menus) - implies --interactive, easier to "
+                        "script")
     p.add_argument("--list", action="store_true",
                    help="print detected agents and all known ids, then exit")
     p.add_argument("--json", action="store_true",
@@ -2861,7 +2862,10 @@ def main(argv=None):
             "(got '%s')" % args.block_id)
         return 1
 
-    if args.interactive:
+    if args.interactive or args.ascii:
+        # --ascii implies the TUI (owner, canary round 3 follow-up):
+        # it picks the navigation STYLE, so alone it must launch
+        # the same interactive flow --interactive does
         return run_tui(args, zero_args=False)
     if not argv:
         return run_tui(args, zero_args=True)

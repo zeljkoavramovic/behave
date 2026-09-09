@@ -966,3 +966,22 @@ def test_ascii_flag_forces_numbered_prompts(run, env_for, fake_home,
     assert drop.read_bytes().startswith(MARKER)
     help_r = run(["--help"])
     assert "--ascii" in help_r.stdout
+
+
+# Canary round 3 follow-up: --ascii ALONE launches the TUI (it picks
+# the navigation style, so it implies --interactive), not headless
+def test_ascii_alone_launches_tui(run, env_for, fake_home, src_file):
+    (fake_home / ".claude").mkdir()
+    r = run(["--ascii", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home,
+            input_text="u" + chr(10) + "1" + chr(10) + "y" + chr(10),
+            timeout=120)
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "Where should the rules apply?" in r.stdout
+    assert "Install into which agents? [1-1]" in r.stdout
+    assert chr(27) + "[" not in r.stdout
+    assert "no agents specified" not in combined  # ascii-alone-ok
+    drop = fake_home / ".claude" / "rules" / "behave.md"
+    assert drop.is_file()
+    assert drop.read_bytes().startswith(MARKER)
