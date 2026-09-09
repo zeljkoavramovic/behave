@@ -763,3 +763,53 @@ def test_kimi_code_cli_list_install_support(run, env_for, fake_home):
              "kimi-code-cli"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Canary round 2 (owner, 2026-09-09): Esc is BACK-NAVIGATION, not a
+# mode switch - the numbered prompt is a capability fallback only.  A
+# real TTY cannot be scripted headless, so a fake reader feeds the
+# widget the same key events StdinReader would (process isolation
+# preserved, like the decoders test above).
+def test_widget_esc_back_navigation_pure():
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "class RR(R):" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "def parse_scope(b):" + chr(10) +
+        "    a = b.strip().lower()" + chr(10) +
+        "    if a in ('q', 'quit'): raise I.QuitTUI()" + chr(10) +
+        "    if a in ('u', 'user'): return 'user'" + chr(10) +
+        "    if a in ('p', 'proj', 'project'): return 'project'" + chr(10) +
+        "    return None" + chr(10) +
+        "rows = ['(u)ser', '(p)roject', '(q)uit']" + chr(10) +
+        "# mid-menu Esc -> None: the BACK signal to the caller" + chr(10) +
+        "v = I._widget_choice(R(['esc']), ['t'], rows, '', 'x'," + chr(10) +
+        "                        parse_scope, ['u', 'p', 'q'])" + chr(10) +
+        "assert v is None" + chr(10) +
+        "# first-menu Esc is intercepted (hint), then Enter picks row 0" + chr(10) +
+        "v = I._widget_choice(R(['esc', 'enter']), ['t'], rows, '', 'x'," + chr(10) +
+        "                        parse_scope, ['u', 'p', 'q']," + chr(10) +
+        "                        on_esc=lambda: (print('first-menu hint')," + chr(10) +
+        "                                        I._MENU_AGAIN)[1])" + chr(10) +
+        "assert v == 'user'" + chr(10) +
+        "# the agent picker turns widget-Esc into _BACK (det_map empty" + chr(10) +
+        "# -> zero-detection full view, so the cursor math is real)" + chr(10) +
+        "r = I._pick_agents(RR(['esc']), set(), {})" + chr(10) +
+        "assert r is I._BACK" + chr(10) +
+        "print('esc-back-ok')"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "esc-back-ok" in r.stdout

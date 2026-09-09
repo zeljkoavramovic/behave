@@ -2096,6 +2096,10 @@ def _vt_ok():
 
 
 _MENU_AGAIN = object()  # on_text result: redisplay the widget and keep going
+_BACK = object()  # wizard back-navigation: Esc walks to the previous
+                 # menu (owner canary round 2).  The numbered prompt is
+                 # a capability fallback for terminals without arrow
+                 # support - never a mid-work mode switch
 
 
 def _menu_write(vt, prev_count, lines):
@@ -2133,13 +2137,14 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status):
 
 
 def _arrow_menu(reader, title, rows, multi=False, checked=(),
-                footer="", on_text=None, empty_msg=None):
+                footer="", on_text=None, on_esc=None, empty_msg=None):
     """The rung-2 menu widget: same items as the numbered prompt, plus a
     cursor.  Up/Down move, Space toggles [x] (multi), Enter accepts,
     Backspace edits, printable keys build a typed buffer submitted to
     on_text on Enter (the prompt's EXISTING answer grammar - numbered
-    input is never removed), Esc abandons the widget for this one
-    question so the caller re-asks via the numbered prompt.  All keys
+    input is never removed), Esc surfaces to the caller, which walks
+    BACK to the previous menu; on_esc may intercept it (the first
+    menu has nothing to go back to).  All keys
     come from reader.read_key(): the StdinReader thread stays the single
     stdin consumer (5.2.2 - see its docstring).
 
@@ -2181,6 +2186,11 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
                 return ("done", checked)
             return ("done", pos)
         elif key == "esc":
+            if on_esc is not None and on_esc() is _MENU_AGAIN:
+                buf = ""
+                status = ""
+                prev = 0  # on_esc printed below the block: full redraw
+                continue
             return ("esc", None)
         elif key == "backspace":
             if buf:
@@ -2200,13 +2210,14 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
 
 
 def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
-                   row_keys):
+                   row_keys, on_esc=None):
     """Single-choice widget shared by the scope/family/variant prompts:
     Up/Down + Enter picks a row; typed buffers go through parse_text -
     the prompt's existing acceptance grammar (returns the answer, None
     when not a valid answer yet, raises QuitTUI for q/quit).  Returns
-    None when the user pressed Esc: the caller falls back to the
-    numbered prompt for this one question.
+    None when the user pressed Esc - the BACK signal: the caller
+    walks to the previous menu (or passes on_esc to intercept it,
+    e.g. at the first menu, where there is nothing to go back to).
 
     row_keys is parallel to rows and holds each row's canonical typed
     answer (its (x) letter).  _arrow_menu returns the raw cursor index
@@ -2224,7 +2235,7 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
         return value
 
     kind, value = _arrow_menu(reader, title, rows, footer=footer,
-                              on_text=on_text)
+                              on_text=on_text, on_esc=on_esc)
     if kind == "esc":
         return None
     if isinstance(value, int):
@@ -2297,12 +2308,12 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
     path or "-"), one list instead of a pre-printed scan dump plus a
     second display-name menu.  The default view is the detected
     agents only; typing l expands the SAME menu in place to every
-    supported agent.  visible is the caller's list and is mutated by
-    that expansion, so an Esc fallback re-asks the numbered prompt
-    over the view the user last saw (the simplest rule - no un-
-    expanding).  Enter with an empty buffer submits the checked rows;
+    supported agent.  visible is the caller's list and is mutated in
+    place by that expansion (the in-place protocol below explains
+    why).  Enter with an empty buffer submits the checked rows;
     typed buffers go through the same _parse_selection grammar as the
-    numbered prompt.  Returns None when the user pressed Esc."""
+    numbered prompt.  Returns None when the user pressed Esc - the
+    caller walks back to the previous menu."""
     pre = set(prechecked_ids)
     rows = [_agent_menu_row(i, a, det_map)
             for i, a in enumerate(visible, 1)]
@@ -2344,8 +2355,8 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         reader,
         ["Install into which agents?  (Space toggles [x]; Enter = the "
          "checked items;",
-         "typed numbers / a / l / q still work; Esc = the numbered "
-         "prompt)"],
+         "typed numbers / a / l / q still work; Esc = back to the "
+         "previous menu)"],
         rows, multi=True, checked=checked,
         footer="  or type numbers (3), ranges (4-7), lists (2,5), "
                "a, l, q + Enter",
@@ -2361,9 +2372,8 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
 
 def _pick_agents(reader, prechecked_ids, det_map):
     tier1 = list(TIER1_ORDER)
-    # visible is shared state: the widget's l-expansion mutates it, so
-    # the numbered fallback (Esc, non-TTY) re-asks over the CURRENT
-    # view - numbers always refer to what is on screen.
+    # visible is mutated in place by the widget's l-expansion so the
+    # rows the user sees and the numbers they type never disagree.
     visible = [a for a in tier1 if a in det_map]
     if not visible:
         # zero detections: an empty widget would crash the cursor
@@ -2376,6 +2386,10 @@ def _pick_agents(reader, prechecked_ids, det_map):
                                      det_map, visible)
         if chosen is not None:
             return chosen
+        # Esc = back to the scope menu.  The numbered loop below runs
+        # ONLY when this terminal has no arrow-key support at all - a
+        # capability fallback, never a mid-work mode switch.
+        return _BACK
     while True:
         n = len(visible)
         for i, a in enumerate(visible, 1):
@@ -2426,6 +2440,8 @@ def _tui_user(args, reader, source):
     prechecked.update(requested)
 
     chosen = _pick_agents(reader, prechecked, det_map)
+    if chosen is _BACK:
+        return _BACK
     if not chosen:
         print("nothing selected; nothing written")
         return 0
@@ -2510,8 +2526,7 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
             invalid_msg="  pick 1-4 (q quits)",
             parse_text=parse_text,
             row_keys=keys)
-        if var is not None:
-            return var
+        return var  # None = Esc = back to the family menu
     print_menu()
     while True:
         ans = _inp(reader, "> ").strip()
@@ -2560,8 +2575,7 @@ def _tui_pick_family(reader, forced=None):
             invalid_msg="  answer a, c, g, j or q",
             parse_text=parse_text,
             row_keys=["a", "c", "g", "j", "q"])
-        if fam is not None:
-            return fam
+        return fam  # None = Esc = back to the scope menu
     print("Which family?")
     print("  (a)gents.md - one marked block at the TOP of AGENTS.md "
           "(created if missing).")
@@ -2605,33 +2619,40 @@ def _tui_project(args, reader, source, pre_variant):
     fams = set(fam_of.values())
     forced = fams.pop() if len(fams) == 1 else None
 
-    while True:
+    targets = []
+    while True:  # wizard loop: Esc walks BACK one menu (canary round 2)
         fam = _tui_pick_family(reader, forced)
         forced = None
-        if fam != "a" or not claude_file_exists(project_dir):
-            break
-        print("  This project already has a Claude file; Claude Code "
-              "ignores AGENTS.md,")
-        print("  and no import bridge is offered. Pick the claude family "
-              "to reach Claude Code.")
-
-    targets = []
-    if fam == "a":
-        targets.append(_mk_target(
-            FAMILY_IDS, project_dir / "AGENTS.md", "inline", shared=True))
-    elif fam == "c":
-        variant = _tui_pick_variant(reader, pre_variant, project_dir)
-        p, m = claude_project_target(variant, project_dir)
-        t = _mk_target(["claude-code"], p, m, drop_agent="claude-code")
-        if variant == "local":
-            t["gitignore"] = True
-        targets.append(t)
-    elif fam == "g":
-        targets.append(_mk_target(
-            ["gemini-cli"], project_dir / "GEMINI.md", "inline"))
-    elif fam == "j":
-        targets.append(_mk_target([], project_dir / "BEHAVE.md", "copy",
-                                  kind="copy"))
+        if fam is None:
+            return _BACK
+        if fam == "a" and claude_file_exists(project_dir):
+            print("  This project already has a Claude file; Claude Code "
+                  "ignores AGENTS.md,")
+            print("  and no import bridge is offered. Pick the claude "
+                  "family to reach Claude Code.")
+            continue
+        if fam == "a":
+            targets.append(_mk_target(
+                FAMILY_IDS, project_dir / "AGENTS.md", "inline",
+                shared=True))
+        elif fam == "c":
+            variant = _tui_pick_variant(reader, pre_variant, project_dir)
+            if variant is None:
+                targets = []
+                continue  # Esc at the variant menu: back to family
+            p, m = claude_project_target(variant, project_dir)
+            t = _mk_target(["claude-code"], p, m,
+                           drop_agent="claude-code")
+            if variant == "local":
+                t["gitignore"] = True
+            targets.append(t)
+        elif fam == "g":
+            targets.append(_mk_target(
+                ["gemini-cli"], project_dir / "GEMINI.md", "inline"))
+        elif fam == "j":
+            targets.append(_mk_target([], project_dir / "BEHAVE.md", "copy",
+                                      kind="copy"))
+        break
     for a in extras:
         targets.append(_mk_target(
             ["github-copilot"],
@@ -2710,7 +2731,15 @@ def run_tui(args, zero_args=False):
               "flags for headless")
         return 1
     try:
-        return _tui_flow(args, reader)
+        rc = _tui_flow(args, reader)
+        if not isinstance(rc, int):
+            # _BACK sentinel: unreachable by construction (the
+            # _tui_flow wizard loop re-asks scope instead of
+            # returning it), but a sentinel must never reach
+            # sys.exit - guaranteed here for the type checker
+            # and any future refactor alike
+            rc = 0
+        return rc
     except QuitTUI:
         print()
         print("quit; nothing written")
@@ -2756,7 +2785,7 @@ def _tui_flow(args, reader):
                     return "project"
                 return None
 
-            scope = _widget_choice(
+            pre_scope = _widget_choice(
                 reader,
                 ["Where should the rules apply?"],
                 ["(u)ser    - all your projects, into the agents you pick",
@@ -2765,9 +2794,10 @@ def _tui_flow(args, reader):
                 footer="",
                 invalid_msg="  answer u, p or q",
                 parse_text=parse_scope,
-                row_keys=["u", "p", "q"])
-            if scope is not None:
-                pre_scope = scope
+                row_keys=["u", "p", "q"],
+                on_esc=lambda: (print("  first menu - Up/Down + Enter "
+                                      "picks a row; q quits"),
+                                _MENU_AGAIN)[1])
         if pre_scope is None:
             print()
             print("Where should the rules apply?")
@@ -2783,10 +2813,19 @@ def _tui_flow(args, reader):
                     pre_scope = "project"
                     break
                 print("  answer u, p or q")
-    if pre_scope == "user":
-        return _tui_user(args, reader, source)
-    pre_variant = ("local" if pre_scope == "local" else args.claude_variant)
-    return _tui_project(args, reader, source, pre_variant)
+    while True:
+        if pre_scope == "user":
+            r = _tui_user(args, reader, source)
+        else:
+            pre_variant = ("local" if pre_scope == "local"
+                           else args.claude_variant)
+            r = _tui_project(args, reader, source, pre_variant)
+        if r is _BACK:
+            # Esc walked all the way back: re-ask the scope menu (the
+            # wizard start), never a swap to the numbered prompt
+            pre_scope = None
+            continue
+        return r
 
 
 # ---------------------------------------------------------------------------
