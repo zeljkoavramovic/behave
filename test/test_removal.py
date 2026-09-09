@@ -378,3 +378,18 @@ def test_zcode_user_remove_round_trip(run, env_for, fake_home, src_file):
              env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not target.exists()
+
+
+# Phase 3.1 (openclaw): --remove round-trip cleans
+# ~/.openclaw/workspace/AGENTS.md
+def test_openclaw_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "openclaw", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".openclaw" / "workspace" / "AGENTS.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "openclaw", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()

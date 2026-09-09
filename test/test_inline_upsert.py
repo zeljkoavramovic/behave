@@ -665,3 +665,32 @@ def test_minimax_code_project_shared_agents_md(run, env_for, fake_home,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (openclaw): user-scope inline block at the top of
+# ~/.openclaw/workspace/AGENTS.md (workspace bootstrap, every session)
+def test_openclaw_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "openclaw", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".openclaw" / "workspace" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 3.1 (openclaw): a pre-existing ~/.openclaw/workspace/AGENTS.md
+# keeps its content below the newly prepended block
+def test_openclaw_user_inline_preserves_existing(run, env_for, fake_home,
+                                                 src_file):
+    target = fake_home / ".openclaw" / "workspace" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "openclaw", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

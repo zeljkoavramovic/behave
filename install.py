@@ -103,7 +103,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
     {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 3, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
-    {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 3, "flags": ("multi",)},
+    {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ("multi",)},
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
     {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
@@ -186,7 +186,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
-    "zcode", "minimax-code",
+    "zcode", "minimax-code", "openclaw",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -221,6 +221,7 @@ DISPLAY = {
     "posit-assistant": "Posit Assistant",
     "zcode": "ZCode",
     "minimax-code": "MiniMax Code",
+    "openclaw": "OpenClaw",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -972,6 +973,17 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 notes.append("warn: minimax-code has no verified "
                              "user-wide target; skipping (project "
                              "scope only)")
+            elif a == "openclaw":
+                # OpenClaw runs a personal workspace model - it loads
+                # ~/.openclaw/workspace/AGENTS.md (workspace bootstrap,
+                # injected every session) but does NOT read project
+                # ./AGENTS.md, so openclaw is intentionally NOT in
+                # FAMILY_IDS; legacy ~/.clawdbot / ~/.moltbot are
+                # inert after migration - detection-only markers.
+                targets.append(_mk_target(
+                    ["openclaw"],
+                    home_base() / ".openclaw" / "workspace" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1002,6 +1014,11 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
         targets.append(_mk_target(
             ["github-copilot"],
             project_dir / ".github" / "copilot-instructions.md", "inline"))
+    if "openclaw" in agents:
+        # user-scope-only agent: OpenClaw's personal workspace model
+        # never reads project ./AGENTS.md (see the user-scope branch)
+        notes.append("warn: openclaw is user-scope only (personal "
+                     "workspace); skipping")
     return targets, notes
 
 
@@ -1181,6 +1198,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".posit" / "assistant" / "AGENTS.md", "inline",
             ["posit-assistant"])
         add(home_base() / ".zcode" / "AGENTS.md", "inline", ["zcode"])
+        add(home_base() / ".openclaw" / "workspace" / "AGENTS.md",
+            "inline", ["openclaw"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

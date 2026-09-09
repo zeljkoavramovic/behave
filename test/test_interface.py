@@ -299,7 +299,7 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     # the three prompts, numbered wording intact
     assert "Where should the rules apply?" in r.stdout
     assert "answer u, p or q" not in r.stdout  # first answer was valid
-    assert "Install into which agents? [1-25]" in r.stdout
+    assert "Install into which agents? [1-26]" in r.stdout
     assert "Enter = all detected" in r.stdout
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
@@ -558,5 +558,39 @@ def test_minimax_code_list_install_support(run, env_for, fake_home):
     lines = [ln for ln in r.stdout.splitlines()
              if ln.strip().split() and ln.strip().split()[0] ==
              "minimax-code"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]
+
+
+# Phase 3.1 (openclaw): project scope is warn-only - openclaw never
+# reads project ./AGENTS.md (personal workspace model), so no shared
+# block is written for it (notes are say()-only, so no --json for the
+# warn; the --json run asserts the empty target list)
+def test_openclaw_project_scope_warn_only(run, env_for, fake_home, proj,
+                                          src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "openclaw", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert ("warn: openclaw is user-scope only (personal workspace); "
+            "skipping" in r.stdout)
+    assert not (proj / "AGENTS.md").exists()
+    r2 = run(["--agent", "openclaw", "--scope", "project", "--project-dir",
+              str(proj), "--yes", "--json", "--source", str(src_file)],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    payload = json.loads(r2.stdout)
+    assert payload["targets"] == []
+    assert not (proj / "AGENTS.md").exists()
+
+
+# Phase 3.1 (openclaw): promoted agent - --list shows openclaw detected
+# without the "(no install support)" note
+def test_openclaw_list_install_support(run, env_for, fake_home):
+    (fake_home / ".openclaw").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] == "openclaw"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
