@@ -925,8 +925,8 @@ def test_menu_block_cursor_inversion_pure():
         "assert not any(chr(27) in ln for ln in plain), plain" + chr(10) +
         "vt = I._menu_block(['t'], ['a', 'b'], 1, [], False, '', '', " + chr(10) +
         "                    '', True)" + chr(10) +
-        "assert vt[1] == '  a', vt" + chr(10) +
-        "assert vt[2] == chr(27) + '[7m> b' + chr(27) + '[27m', vt" + chr(10) +
+        "assert vt[1].rstrip() == '  a', vt" + chr(10) +
+        "assert vt[2].rstrip() == chr(27) + '[7m> b' + chr(27) + '[27m', vt" + chr(10) +
         "multi = I._menu_block(['t'], ['a'], 0, [True], True, '', '', " + chr(10) +
         "                       '', True)" + chr(10) +
         "assert multi[1].startswith(chr(27) + '[7m> [x] a'), multi" + chr(10) +

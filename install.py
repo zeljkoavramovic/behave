@@ -2126,7 +2126,10 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
     (and [x]/[ ] marks in multi mode), footer, and one status/typed
     line - raw mode has no terminal echo, so the typed buffer must be
     visible here."""
-    lines = list(title)
+    # (owner, canary round 3 follow-up) Precompute items and width
+    # so every VT-cursor bar pads to the widest row line in this menu
+    items = []
+    width = 0
     for i, row in enumerate(rows):
         parts = row.split("\n")
         lead = ">" if i == pos else " "
@@ -2137,11 +2140,18 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
             item = ["%s %s" % (lead, parts[0])]
         for extra in parts[1:]:
             item.append("  " + extra)
+        items.append(item)
+        width = max(width, max(len(ln) for ln in item))
+    lines = list(title)
+    for i, item in enumerate(items):
         if vt and i == pos:
             # reverse video for the whole cursor row (owner, canary
             # round 3): the highlight IS the cursor; the '>' lead stays
-            # for non-VT fallbacks where no escape is safe to emit
-            lines.extend("\x1b[7m%s\x1b[27m" % ln for ln in item)
+            # for non-VT fallbacks where no escape is safe to emit;
+            # ljust(width) makes every bar equally wide (owner
+            # follow-up: uniform bars please the eye)
+            lines.extend("\x1b[7m%s\x1b[27m" % ln.ljust(width)
+                         for ln in item)
         else:
             lines.extend(item)
     if footer:
