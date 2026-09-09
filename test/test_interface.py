@@ -869,3 +869,49 @@ def test_tui_flow_esc_wizard_pure(tmp_path):
     # the round trips actually reached the family and agents menus
     assert "Which family?" in r.stdout
     assert "Scanning for installed agents" in r.stdout
+
+
+# Canary round 2, the missing matrix cell: Esc at the Claude-file
+# VARIANT menu walks back to the FAMILY menu (the _tui_project inner
+# loop's continue path - same wiring class the wizard test caught).
+def test_tui_flow_variant_esc_back_pure(tmp_path):
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--source', '" + src_arg + "'," + chr(10) +
+        "     '--project-dir', '.'])" + chr(10) +
+        "keys = ['down', 'enter',   # scope -> project" + chr(10) +
+        "        'down', 'enter',   # family -> (c)laude.md -> variant menu" + chr(10) +
+        "        'esc',                 # variant -> back to family" + chr(10) +
+        "        'q', 'enter']          # quit at the family menu" + chr(10) +
+        "try:" + chr(10) +
+        "    I._tui_flow(args, R(keys))" + chr(10) +
+        "    raise SystemExit('flow returned without QuitTUI')" + chr(10) +
+        "except I.QuitTUI:" + chr(10) +
+        "    print('variant-esc-ok')"
+    )
+    import subprocess
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "variant-esc-ok" in r.stdout
+    assert "Which Claude file?" in r.stdout
+    # family visited twice: visit1 = render + down-redraw (enter
+    # returns without redraw), visit2 = render + typed-q redraw
+    assert r.stdout.count("Which family?") == 4, r.stdout
