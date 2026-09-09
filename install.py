@@ -142,7 +142,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "lingma", "env": None, "markers": [("h", ".lingma")], "tier": 3, "flags": ()},
     {"id": "loaf", "env": None, "markers": [("h", ".loaf")], "tier": 3, "flags": ()},
     {"id": "mcpjam", "env": None, "markers": [("h", ".mcpjam")], "tier": 3, "flags": ()},
-    {"id": "minimax-code", "env": None, "markers": [("h", ".minimax"), ("p", "/Applications/MiniMax Code.app")], "tier": 3, "flags": ("multi",)},
+    {"id": "minimax-code", "env": None, "markers": [("h", ".minimax"), ("p", "/Applications/MiniMax Code.app")], "tier": 1, "flags": ("multi",)},
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 3, "flags": ()},
     {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
     {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
@@ -186,7 +186,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
-    "zcode",
+    "zcode", "minimax-code",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -194,7 +194,7 @@ TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
-              "junie", "posit-assistant", "zcode"]
+              "junie", "posit-assistant", "zcode", "minimax-code"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -220,6 +220,7 @@ DISPLAY = {
     "junie": "Junie",
     "posit-assistant": "Posit Assistant",
     "zcode": "ZCode",
+    "minimax-code": "MiniMax Code",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -963,6 +964,14 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["zcode"], home_base() / ".zcode" / "AGENTS.md",
                     "inline"))
+            elif a == "minimax-code":
+                # ~/.minimax/AGENTS.md is read by the shipped desktop
+                # bundle but UNDOCUMENTED (TODO-LEFT findings) - wire
+                # nothing on hope; project scope rides the shared
+                # ./AGENTS.md family block.
+                notes.append("warn: minimax-code has no verified "
+                             "user-wide target; skipping (project "
+                             "scope only)")
         return targets, notes
 
     # project scope
