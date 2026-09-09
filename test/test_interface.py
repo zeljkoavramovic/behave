@@ -791,12 +791,6 @@ def test_widget_esc_back_navigation_pure():
         "v = I._widget_choice(R(['esc']), ['t'], rows, '', 'x'," + chr(10) +
         "                        parse_scope, ['u', 'p', 'q'])" + chr(10) +
         "assert v is None" + chr(10) +
-        "# first-menu Esc is intercepted (hint), then Enter picks row 0" + chr(10) +
-        "v = I._widget_choice(R(['esc', 'enter']), ['t'], rows, '', 'x'," + chr(10) +
-        "                        parse_scope, ['u', 'p', 'q']," + chr(10) +
-        "                        on_esc=lambda: (print('first-menu hint')," + chr(10) +
-        "                                        I._MENU_AGAIN)[1])" + chr(10) +
-        "assert v == 'user'" + chr(10) +
         "# the agent picker turns widget-Esc into _BACK (det_map empty" + chr(10) +
         "# -> zero-detection full view, so the cursor math is real)" + chr(10) +
         "r = I._pick_agents(RR(['esc']), set(), {})" + chr(10) +
@@ -840,7 +834,7 @@ def test_tui_flow_esc_wizard_pure(tmp_path):
         "        'esc',                 # family -> back to scope" + chr(10) +
         "        'enter',               # scope -> user -> agents menu" + chr(10) +
         "        'esc',                 # agents -> back to scope" + chr(10) +
-        "        'q', 'enter']          # quit at the scope menu" + chr(10) +
+        "        'esc']                 # Esc at root == q (round 3)" + chr(10) +
         "try:" + chr(10) +
         "    I._tui_flow(args, R(keys))" + chr(10) +
         "    raise SystemExit('flow returned without QuitTUI')" + chr(10) +
@@ -863,9 +857,10 @@ def test_tui_flow_esc_wizard_pure(tmp_path):
     assert "wizard-esc-ok" in r.stdout
     # Esc walked back to the scope menu TWICE -> 3 visits; each
     # visit renders once per key event, so the fixed key script
-    # yields exactly 5 frames: visit1 (render + down-redraw),
-    # visit2 (render), visit3 (render + typed-q redraw)
-    assert r.stdout.count("Where should the rules apply?") == 5, r.stdout
+    # yields exactly 4 frames: visit1 (render + down-redraw),
+    # visit2 (render), visit3 (render; the closing Esc returns
+    # without a redraw - and counts as quit per round 3)
+    assert r.stdout.count("Where should the rules apply?") == 4, r.stdout
     # the round trips actually reached the family and agents menus
     assert "Which family?" in r.stdout
     assert "Scanning for installed agents" in r.stdout
@@ -915,3 +910,59 @@ def test_tui_flow_variant_esc_back_pure(tmp_path):
     # family visited twice: visit1 = render + down-redraw (enter
     # returns without redraw), visit2 = render + typed-q redraw
     assert r.stdout.count("Which family?") == 4, r.stdout
+
+
+# Canary round 3: the cursor row renders in reverse video on VT
+
+# terminals (and never emits escapes otherwise - the piped tests
+
+# assert a clean stream elsewhere).
+def test_menu_block_cursor_inversion_pure():
+    code = (
+        "import install as I" + chr(10) +
+        "plain = I._menu_block(['t'], ['a', 'b'], 1, [], False, '', '', " + chr(10) +
+        "                       '', False)" + chr(10) +
+        "assert not any(chr(27) in ln for ln in plain), plain" + chr(10) +
+        "vt = I._menu_block(['t'], ['a', 'b'], 1, [], False, '', '', " + chr(10) +
+        "                    '', True)" + chr(10) +
+        "assert vt[1] == '  a', vt" + chr(10) +
+        "assert vt[2] == chr(27) + '[7m> b' + chr(27) + '[27m', vt" + chr(10) +
+        "multi = I._menu_block(['t'], ['a'], 0, [True], True, '', '', " + chr(10) +
+        "                       '', True)" + chr(10) +
+        "assert multi[1].startswith(chr(27) + '[7m> [x] a'), multi" + chr(10) +
+        "print('invert-ok')"
+    )
+    import subprocess
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "invert-ok" in r.stdout
+
+
+# Canary round 3: --ascii forces the numbered-prompt navigation -
+# the arrow widget never engages, every prompt stays scriptable
+def test_ascii_flag_forces_numbered_prompts(run, env_for, fake_home,
+                                            src_file):
+    (fake_home / ".claude").mkdir()
+    r = run(["--interactive", "--ascii", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home,
+            input_text="u" + chr(10) + "1" + chr(10) + "y" + chr(10),
+            timeout=120)
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "Install into which agents? [1-1]" in r.stdout
+    assert "Space toggles" not in r.stdout  # widget never engaged
+    assert chr(27) + "[" not in r.stdout
+    assert "Traceback" not in combined
+    drop = fake_home / ".claude" / "rules" / "behave.md"
+    assert drop.is_file()
+    assert drop.read_bytes().startswith(MARKER)
+    help_r = run(["--help"])
+    assert "--ascii" in help_r.stdout

@@ -1361,6 +1361,10 @@ def build_parser():
     p.add_argument("--interactive", action="store_true",
                    help="launch the interactive TUI; other flags act as "
                         "pre-selections (--json/--quiet are ignored there)")
+    p.add_argument("--ascii", action="store_true",
+                   help="force the numbered-prompt navigation (no "
+                        "arrow-key menus) even on an interactive "
+                        "terminal - easier to script")
     p.add_argument("--list", action="store_true",
                    help="print detected agents and all known ids, then exit")
     p.add_argument("--json", action="store_true",
@@ -1648,6 +1652,7 @@ class StdinReader(object):
         self._first = None
         self._pushback = None
         self._raw = False           # P5.2: per-key source active (widget-capable)
+        self._no_widget = False     # --ascii: keep _raw, skip the widget
         self._getwch = None         # real Windows console: msvcrt.getwch
         self._restore_attrs = None  # POSIX cbreak: (fd, attrs) to restore
         self._raw_eof = False       # raw source saw EOF (readline bookkeeping)
@@ -1838,8 +1843,10 @@ class StdinReader(object):
     def raw_keys(self):
         """True when this reader produces per-key events, i.e. stdin was
         a real TTY/console at construction and raw mode held - the only
-        condition under which the arrow-key widget may engage."""
-        return self._raw
+        condition under which the arrow-key widget may engage.  --ascii
+        clears this via _no_widget so EVERY prompt falls back to the
+        numbered grammar from the start."""
+        return self._raw and not self._no_widget
 
     def read_key(self):
         """Next key event for the widget; produced by the same daemon
@@ -2112,7 +2119,8 @@ def _menu_write(vt, prev_count, lines):
     out.flush()
 
 
-def _menu_block(title, rows, pos, checked, multi, footer, buf, status):
+def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
+                vt=False):
     """The widget's rendered lines: title, item rows with a '>' cursor
     (and [x]/[ ] marks in multi mode), footer, and one status/typed
     line - raw mode has no terminal echo, so the typed buffer must be
@@ -2122,12 +2130,19 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status):
         parts = row.split("\n")
         lead = ">" if i == pos else " "
         if multi:
-            lines.append("%s [%c] %s" % (lead, "x" if checked[i] else " ",
-                                         parts[0]))
+            item = ["%s [%c] %s" % (lead, "x" if checked[i] else " ",
+                                   parts[0])]
         else:
-            lines.append("%s %s" % (lead, parts[0]))
+            item = ["%s %s" % (lead, parts[0])]
         for extra in parts[1:]:
-            lines.append("  " + extra)
+            item.append("  " + extra)
+        if vt and i == pos:
+            # reverse video for the whole cursor row (owner, canary
+            # round 3): the highlight IS the cursor; the '>' lead stays
+            # for non-VT fallbacks where no escape is safe to emit
+            lines.extend("\x1b[7m%s\x1b[27m" % ln for ln in item)
+        else:
+            lines.extend(item)
     if footer:
         lines.append(footer)
     tail = status or ("typed: " + buf if buf else "")
@@ -2137,14 +2152,13 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status):
 
 
 def _arrow_menu(reader, title, rows, multi=False, checked=(),
-                footer="", on_text=None, on_esc=None, empty_msg=None):
+                footer="", on_text=None, empty_msg=None):
     """The rung-2 menu widget: same items as the numbered prompt, plus a
     cursor.  Up/Down move, Space toggles [x] (multi), Enter accepts,
     Backspace edits, printable keys build a typed buffer submitted to
     on_text on Enter (the prompt's EXISTING answer grammar - numbered
     input is never removed), Esc surfaces to the caller, which walks
-    BACK to the previous menu; on_esc may intercept it (the first
-    menu has nothing to go back to).  All keys
+    BACK to the previous menu.  All keys
     come from reader.read_key(): the StdinReader thread stays the single
     stdin consumer (5.2.2 - see its docstring).
 
@@ -2162,7 +2176,7 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     prev = 0
     while True:
         block = _menu_block(title, rows, pos, checked, multi, footer,
-                            buf, status)
+                            buf, status, vt)
         _menu_write(vt, prev, block)
         prev = len(block)
         key = reader.read_key()
@@ -2186,11 +2200,6 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
                 return ("done", checked)
             return ("done", pos)
         elif key == "esc":
-            if on_esc is not None and on_esc() is _MENU_AGAIN:
-                buf = ""
-                status = ""
-                prev = 0  # on_esc printed below the block: full redraw
-                continue
             return ("esc", None)
         elif key == "backspace":
             if buf:
@@ -2210,14 +2219,13 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
 
 
 def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
-                   row_keys, on_esc=None):
+                   row_keys):
     """Single-choice widget shared by the scope/family/variant prompts:
     Up/Down + Enter picks a row; typed buffers go through parse_text -
     the prompt's existing acceptance grammar (returns the answer, None
     when not a valid answer yet, raises QuitTUI for q/quit).  Returns
     None when the user pressed Esc - the BACK signal: the caller
-    walks to the previous menu (or passes on_esc to intercept it,
-    e.g. at the first menu, where there is nothing to go back to).
+    walks to the previous menu.
 
     row_keys is parallel to rows and holds each row's canonical typed
     answer (its (x) letter).  _arrow_menu returns the raw cursor index
@@ -2235,7 +2243,7 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
         return value
 
     kind, value = _arrow_menu(reader, title, rows, footer=footer,
-                              on_text=on_text, on_esc=on_esc)
+                              on_text=on_text)
     if kind == "esc":
         return None
     if isinstance(value, int):
@@ -2726,6 +2734,7 @@ def run_tui(args, zero_args=False):
     OUT.quiet = False
     OUT.json_mode = False
     reader = StdinReader(probe_timeout=0.3 if zero_args else None)
+    reader._no_widget = getattr(args, "ascii", False)
     if zero_args and reader.probe_saw_eof():
         print("no interactive terminal; run --help for parameters or pass "
               "flags for headless")
@@ -2798,10 +2807,12 @@ def _tui_flow(args, reader):
                     footer="",
                     invalid_msg="  answer u, p or q",
                     parse_text=parse_scope,
-                    row_keys=["u", "p", "q"],
-                    on_esc=lambda: (print("  first menu - Up/Down + Enter "
-                                          "picks a row; q quits"),
-                                    _MENU_AGAIN)[1])
+                    row_keys=["u", "p", "q"])
+                if pre_scope is None:
+                    # Esc at the root menu == (q)uit (owner, canary
+                    # round 3): nothing lies before this menu, so
+                    # back-navigation and quit are the same act here
+                    raise QuitTUI()
             if pre_scope is None:
                 print()
                 print("Where should the rules apply?")
