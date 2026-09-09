@@ -2772,48 +2772,51 @@ def _tui_flow(args, reader):
     pre_scope = None
     if args.scope in ("user", "project", "local"):
         pre_scope = args.scope
-    if pre_scope is None:
-        if reader.raw_keys():
-
-            def parse_scope(buf):
-                a = buf.strip().lower()
-                if a in ("q", "quit"):
-                    raise QuitTUI()
-                if a in ("u", "user"):
-                    return "user"
-                if a in ("p", "proj", "project"):
-                    return "project"
-                return None
-
-            pre_scope = _widget_choice(
-                reader,
-                ["Where should the rules apply?"],
-                ["(u)ser    - all your projects, into the agents you pick",
-                 "(p)roject - this directory only (cwd: %s)" % Path.cwd(),
-                 "(q)uit    - exit without changing anything"],
-                footer="",
-                invalid_msg="  answer u, p or q",
-                parse_text=parse_scope,
-                row_keys=["u", "p", "q"],
-                on_esc=lambda: (print("  first menu - Up/Down + Enter "
-                                      "picks a row; q quits"),
-                                _MENU_AGAIN)[1])
-        if pre_scope is None:
-            print()
-            print("Where should the rules apply?")
-            print("  (u)ser    - all your projects, into the agents you pick")
-            print("  (p)roject - this directory only (cwd: %s)" % Path.cwd())
-            print("  (q)uit    - exit without changing anything")
-            while True:
-                a = _inp(reader, "> ").strip().lower()
-                if a in ("u", "user"):
-                    pre_scope = "user"
-                    break
-                if a in ("p", "proj", "project"):
-                    pre_scope = "project"
-                    break
-                print("  answer u, p or q")
     while True:
+        # the scope ask lives INSIDE the wizard loop so _BACK
+        # re-renders this menu - the wizard start - instead of
+        # silently re-dispatching the previous branch
+        if pre_scope is None:
+            if reader.raw_keys():
+
+                def parse_scope(buf):
+                    a = buf.strip().lower()
+                    if a in ("q", "quit"):
+                        raise QuitTUI()
+                    if a in ("u", "user"):
+                        return "user"
+                    if a in ("p", "proj", "project"):
+                        return "project"
+                    return None
+
+                pre_scope = _widget_choice(
+                    reader,
+                    ["Where should the rules apply?"],
+                    ["(u)ser    - all your projects, into the agents you pick",
+                     "(p)roject - this directory only (cwd: %s)" % Path.cwd(),
+                     "(q)uit    - exit without changing anything"],
+                    footer="",
+                    invalid_msg="  answer u, p or q",
+                    parse_text=parse_scope,
+                    row_keys=["u", "p", "q"],
+                    on_esc=lambda: (print("  first menu - Up/Down + Enter "
+                                          "picks a row; q quits"),
+                                    _MENU_AGAIN)[1])
+            if pre_scope is None:
+                print()
+                print("Where should the rules apply?")
+                print("  (u)ser    - all your projects, into the agents you pick")
+                print("  (p)roject - this directory only (cwd: %s)" % Path.cwd())
+                print("  (q)uit    - exit without changing anything")
+                while True:
+                    a = _inp(reader, "> ").strip().lower()
+                    if a in ("u", "user"):
+                        pre_scope = "user"
+                        break
+                    if a in ("p", "proj", "project"):
+                        pre_scope = "project"
+                        break
+                    print("  answer u, p or q")
         if pre_scope == "user":
             r = _tui_user(args, reader, source)
         else:

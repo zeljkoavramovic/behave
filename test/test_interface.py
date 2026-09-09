@@ -3,6 +3,7 @@
 import hashlib
 import http.server
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -813,3 +814,58 @@ def test_widget_esc_back_navigation_pure():
     )
     assert r.returncode == 0, r.stdout + r.stderr
     assert "esc-back-ok" in r.stdout
+
+
+# Canary round 2, end-to-end: the WIZARD wiring, not just the widget
+# components - a fake reader with raw keys drives _tui_flow through
+# scope -> family, Esc -> back to scope, user -> agents, Esc -> back
+# to scope, then q.  Proves headless that Esc re-asks the previous
+# menu all the way up the chain (the owner canary then only has to
+# confirm the same behavior on real terminals).
+def test_tui_flow_esc_wizard_pure(tmp_path):
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--source', '" + src_arg + "'," + chr(10) +
+        "     '--project-dir', '.'])" + chr(10) +
+        "keys = ['down', 'enter',   # scope -> project -> family menu" + chr(10) +
+        "        'esc',                 # family -> back to scope" + chr(10) +
+        "        'enter',               # scope -> user -> agents menu" + chr(10) +
+        "        'esc',                 # agents -> back to scope" + chr(10) +
+        "        'q', 'enter']          # quit at the scope menu" + chr(10) +
+        "try:" + chr(10) +
+        "    I._tui_flow(args, R(keys))" + chr(10) +
+        "    raise SystemExit('flow returned without QuitTUI')" + chr(10) +
+        "except I.QuitTUI:" + chr(10) +
+        "    print('wizard-esc-ok')"
+    )
+    import subprocess, sys
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path),
+             "PWD": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "wizard-esc-ok" in r.stdout
+    # Esc walked back to the scope menu TWICE -> 3 visits; each
+    # visit renders once per key event, so the fixed key script
+    # yields exactly 5 frames: visit1 (render + down-redraw),
+    # visit2 (render), visit3 (render + typed-q redraw)
+    assert r.stdout.count("Where should the rules apply?") == 5, r.stdout
+    # the round trips actually reached the family and agents menus
+    assert "Which family?" in r.stdout
+    assert "Scanning for installed agents" in r.stdout
