@@ -1258,3 +1258,21 @@ def test_command_code_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (qoder-cn): project scope rides the shared ./AGENTS.md
+# family block (the CN CLI reads project AGENTS.md)
+def test_qoder_cn_project_shared_agents_md(run, env_for, fake_home,
+                                           proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "qoder-cn", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "qoder-cn" in served
+    assert "codex" in served  # the shared block, not a qoder-cn-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

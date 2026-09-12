@@ -284,3 +284,17 @@ def test_aider_desk_user_drop(run, env_for, fake_home, src_file):
     assert data.startswith(MARKER)
     assert not data.startswith(b"---")
     assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 9 (qoder-cn): user-scope drop into ~/.qoder-cn/rules (bare,
+# mirrors the intl qoder exactly - always active by default)
+def test_qoder_cn_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "qoder-cn", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".qoder-cn" / "rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(MARKER)
+    assert not data.startswith(b"---")
+    assert b"# RULES\nrules body line\n" in data

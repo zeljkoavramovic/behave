@@ -1194,3 +1194,16 @@ def test_command_code_list_install_support(run, env_for, fake_home):
              "command-code"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 9 (qoder-cn): promoted agent - --list shows qoder-cn detected
+# without the "(no install support)" note
+def test_qoder_cn_list_install_support(run, env_for, fake_home):
+    (fake_home / ".qoder-cn").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "qoder-cn"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

@@ -157,7 +157,9 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
     {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ()},
     {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 1, "flags": ()},
-    {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 3, "flags": ()},
+    # qoder-cn: QODERCN_CONFIG_DIR override exists but detection/install
+    # use the plain ~/.qoder-cn path.
+    {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 1, "flags": ()},
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
     {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
     {"id": "reasonix", "env": None, "markers": [("h", ".reasonix")], "tier": 3, "flags": ()},
@@ -201,6 +203,7 @@ TIER1_ORDER = [
     "aider-desk",
     "forgecode",
     "command-code",
+    "qoder-cn",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -212,7 +215,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
-              "aider-desk", "forgecode", "command-code"]
+              "aider-desk", "forgecode", "command-code", "qoder-cn"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -257,6 +260,7 @@ DISPLAY = {
     "aider-desk": "AiderDesk",
     "forgecode": "ForgeCode",
     "command-code": "Command Code",
+    "qoder-cn": "Qoder CN",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -276,6 +280,7 @@ DROP_FRONTMATTER = {
     "bob": "",
     "trae-cn": "---\nalwaysApply: true\n---\n",
     "aider-desk": "",
+    "qoder-cn": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -1230,6 +1235,17 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["command-code"],
                     home_base() / ".commandcode" / "AGENTS.md", "inline"))
+            elif a == "qoder-cn":
+                # Qoder CLI CN mirrors the intl qoder exactly: user
+                # rules at ~/.qoder-cn/rules/ are always active by
+                # default - bare drop, no frontmatter (qoder
+                # precedent). QODERCN_CONFIG_DIR exists but install
+                # uses the plain path. Project scope rides the shared
+                # ./AGENTS.md family block (the CN CLI reads project
+                # AGENTS.md).
+                targets.append(_mk_target(
+                    ["qoder-cn"], home_base() / ".qoder-cn" / "rules" /
+                    "behave.md", "drop", drop_agent="qoder-cn"))
         return targets, notes
 
     # project scope
@@ -1487,6 +1503,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["forgecode"])
         add(home_base() / ".commandcode" / "AGENTS.md", "inline",
             ["command-code"])
+        add(home_base() / ".qoder-cn" / "rules" / "behave.md",
+            "drop", ["qoder-cn"], drop_agent="qoder-cn")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
