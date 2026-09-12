@@ -1005,3 +1005,35 @@ def test_bob_project_shared_agents_md(run, env_for, fake_home, proj,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 2 (cortex): user-scope inline into
+# ~/.snowflake/cortex/AGENTS.md (user-scope primary location; the
+# Custom instructions editor reads and writes this exact file)
+def test_cortex_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "cortex", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".snowflake" / "cortex" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 8 batch 2 (cortex): project scope rides the shared ./AGENTS.md
+# family block (root AGENTS.md auto-discovered, default on)
+def test_cortex_project_shared_agents_md(run, env_for, fake_home, proj,
+                                         src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "cortex", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "cortex" in served
+    assert "codex" in served  # the shared block, not a cortex-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

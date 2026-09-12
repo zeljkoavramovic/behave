@@ -137,7 +137,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode,minimax-code," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
-                  "grok,mistral-vibe,rovodev,bob"
+                  "grok,mistral-vibe,rovodev,bob,cortex"
     assert agents_list in agents
 
 
@@ -604,3 +604,19 @@ def test_trae_cn_project_remove_round_trip(run, env_for, fake_home,
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert "trae-cn" in r2.stdout
     assert not drop.exists()
+
+
+# Phase 8 batch 2 (cortex): --remove round-trip cleans the
+# ~/.snowflake/cortex/AGENTS.md inline block
+def test_cortex_user_remove_round_trip(run, env_for, fake_home,
+                                       src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "cortex", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".snowflake" / "cortex" / "AGENTS.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "cortex", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()

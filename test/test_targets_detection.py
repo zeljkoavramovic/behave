@@ -323,3 +323,12 @@ def test_trae_cn_detection(run, env_for, fake_home):
     ids = detected_ids(r.stdout)
     assert "trae-cn" in ids
     assert "trae" not in ids
+
+
+# Phase 8 batch 2 (cortex): the ~/.snowflake/cortex marker detects
+# cortex (CoCo config root shared by CLI and Desktop)
+def test_cortex_detection(run, env_for, fake_home):
+    (fake_home / ".snowflake" / "cortex").mkdir(parents=True)
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "cortex" in detected_ids(r.stdout)

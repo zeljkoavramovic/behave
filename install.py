@@ -112,7 +112,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")], "tier": 1, "flags": ()},
     {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 3, "flags": ()},
     {"id": "continue", "env": None, "markers": [("c", ".continue"), ("h", ".continue")], "tier": 3, "flags": ("cwd",)},
-    {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")], "tier": 3, "flags": ()},
+    {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")], "tier": 1, "flags": ()},
     {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 1, "flags": ()},
     {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
     {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
@@ -192,6 +192,7 @@ TIER1_ORDER = [
     "rovodev",
     "bob",
     "trae-cn",
+    "cortex",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -201,7 +202,8 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
-              "qoder", "grok", "mistral-vibe", "rovodev", "bob"]
+              "qoder", "grok", "mistral-vibe", "rovodev", "bob",
+              "cortex"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -240,6 +242,7 @@ DISPLAY = {
     "rovodev": "Rovo Dev",
     "bob": "IBM Bob",
     "trae-cn": "Trae CN",
+    "cortex": "Cortex Code",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1141,6 +1144,20 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["trae-cn"],
                     home_base() / ".trae-cn" / "user_rules" / "behave.md",
                     "drop", drop_agent="trae-cn"))
+            elif a == "cortex":
+                # Snowflake Cortex Code (CoCo): user-scope instruction
+                # files are searched in ~/.snowflake/cortex/ (primary;
+                # the Custom instructions editor reads/writes
+                # ~/.snowflake/cortex/AGENTS.md) - Desktop-documented;
+                # the CLI documents project AGENTS.md but is silent on
+                # user instruction files (TODO-LEFT findings caveat).
+                # Project scope rides the shared ./AGENTS.md family
+                # block (root AGENTS.md auto-discovered workspace root
+                # -> git root, default on).
+                targets.append(_mk_target(
+                    ["cortex"],
+                    home_base() / ".snowflake" / "cortex" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1387,6 +1404,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["bob"], drop_agent="bob")
         add(home_base() / ".trae-cn" / "user_rules" / "behave.md",
             "drop", ["trae-cn"], drop_agent="trae-cn")
+        add(home_base() / ".snowflake" / "cortex" / "AGENTS.md",
+            "inline", ["cortex"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
