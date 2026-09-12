@@ -4,6 +4,7 @@ import hashlib
 import http.server
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -300,9 +301,16 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     # the three prompts, numbered wording intact
     assert "Where should the rules apply?" in r.stdout
     assert "answer u, p or q" not in r.stdout  # first answer was valid
-    # zero detections in this fixture: the menu falls back to all 27
-    assert "no supported agents detected; showing all 27" in r.stdout
-    assert "Install into which agents? [1-27]" in r.stdout
+    # zero detections in this fixture: the menu falls back to the full
+    # supported list; both count strings must agree with the menu range
+    # (derived from len(TIER1_ORDER) - a promotion can never ship a
+    # stale literal, and neither can this test)
+    m = re.search(r"Install into which agents\? \[1-(\d+)\]", r.stdout)
+    assert m, "numbered agent prompt not found"
+    full = int(m.group(1))
+    assert ("no supported agents detected; showing all %d" % full) \
+        in r.stdout
+    assert ("a = all %d" % full) in r.stdout
     assert "Enter = checked/detected" in r.stdout
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
@@ -318,8 +326,9 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
 
 
 # Detected-first menu: the FIRST numbered prompt covers only detected
-# agents ([1-2] here); typing l expands the SAME menu to all 27 and the
-# re-prompt reads [1-27] with non-detected rows showing "-"
+# agents ([1-2] here); typing l expands the SAME menu to the full
+# supported list and the re-prompt reads [1-N] (N = len(TIER1_ORDER),
+# derived - never a stale literal) with non-detected rows showing "-"
 def test_agent_menu_detected_first_l_expands(run, env_for, fake_home,
                                              src_file):
     (fake_home / ".claude").mkdir()
@@ -330,7 +339,11 @@ def test_agent_menu_detected_first_l_expands(run, env_for, fake_home,
     assert r.returncode == 0, combined
     assert "Install into which agents? [1-2]" in r.stdout
     assert "no supported agents detected" not in r.stdout
-    assert "Install into which agents? [1-27]" in r.stdout
+    ranges = re.findall(r"Install into which agents\? \[1-(\d+)\]",
+                        r.stdout)
+    full = int(ranges[-1])
+    assert full > 2
+    assert ("a = all %d" % full) in r.stdout
     # full-list positions after expansion: gemini-cli is #6, undetected
     assert "6  Gemini CLI" in r.stdout
     assert "quit; nothing written" in combined
@@ -338,7 +351,8 @@ def test_agent_menu_detected_first_l_expands(run, env_for, fake_home,
 
 
 # l-expansion then a full-list number installs a NON-detected agent
-# (numbers after l refer to the on-screen 27-row list)
+# (numbers after l refer to the on-screen full-list rows; the expanded
+# range and the "a = all N" hint must agree, N derived not pinned)
 def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
                                                        fake_home, src_file):
     (fake_home / ".claude").mkdir()
@@ -347,7 +361,11 @@ def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
     combined = r.stdout + r.stderr
     assert r.returncode == 0, combined
     assert "Install into which agents? [1-1]" in r.stdout
-    assert "Install into which agents? [1-27]" in r.stdout
+    ranges = re.findall(r"Install into which agents\? \[1-(\d+)\]",
+                        r.stdout)
+    full = int(ranges[-1])
+    assert full > 1
+    assert ("a = all %d" % full) in r.stdout
     g = fake_home / ".gemini" / "GEMINI.md"
     assert g.is_file()
     assert g.read_bytes().startswith(B)
@@ -355,14 +373,20 @@ def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
 
 
 # zero detections: Enter (= default) reports nothing pre-checked and
-# re-asks; 'a' then selects all 27 (confirm declined to stay read-only)
+# re-asks; 'a' then selects every supported agent (confirm declined to
+# stay read-only); the count strings must agree with the menu range
 def test_agent_menu_zero_detections_enter_then_all(run, env_for,
                                                    fake_home, src_file):
     r = run(["--interactive", "--source", str(src_file)],
             env=env_for(fake_home), cwd=fake_home, input_text="u\n\na\nn\n")
     combined = r.stdout + r.stderr
     assert r.returncode == 0, combined
-    assert "no supported agents detected; showing all 27" in r.stdout
+    m = re.search(r"Install into which agents\? \[1-(\d+)\]", r.stdout)
+    assert m, "numbered agent prompt not found"
+    full = int(m.group(1))
+    assert ("no supported agents detected; showing all %d" % full) \
+        in r.stdout
+    assert ("a = all %d" % full) in r.stdout
     assert "nothing is pre-checked" in r.stdout
     assert "What will change" in r.stdout
     assert "aborted; nothing written" in combined

@@ -2399,7 +2399,8 @@ def _pick_agents(reader, prechecked_ids, det_map):
         # zero detections: an empty widget would crash the cursor
         # cycling (modulo len(rows) of zero rows) - show the full
         # supported list instead
-        print("  no supported agents detected; showing all 27")
+        print("  no supported agents detected; showing all %d"
+              % len(tier1))
         visible[:] = tier1
     if reader.raw_keys():
         chosen = _pick_agents_widget(reader, tier1, prechecked_ids,
@@ -2417,8 +2418,8 @@ def _pick_agents(reader, prechecked_ids, det_map):
         ans = _inp(
             reader,
             "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
-            "Enter = checked/detected, a = all 27, l = show all, "
-            "q = quit)\n> " % n)
+            "Enter = checked/detected, a = all %d, l = show all, "
+            "q = quit)\n> " % (n, len(tier1)))
         res = _parse_selection(ans, n)
         if res == "list":
             visible[:] = tier1
