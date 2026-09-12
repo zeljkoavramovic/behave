@@ -743,3 +743,52 @@ def test_kimi_code_cli_project_shared_agents_md(run, env_for, fake_home,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (qwen-code): user-scope inline block at the top of
+# ~/.qwen/QWEN.md (qwen-code's global context file, loaded every
+# conversation)
+def test_qwen_code_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "qwen-code", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".qwen" / "QWEN.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (qwen-code): a pre-existing ~/.qwen/QWEN.md keeps its content
+# below the newly prepended block
+def test_qwen_code_user_inline_preserves_existing(run, env_for, fake_home,
+                                                  src_file):
+    target = fake_home / ".qwen" / "QWEN.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "qwen-code", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (qwen-code): project scope rides the shared ./AGENTS.md family
+# block (AGENTS.md is in qwen-code's default context filename list)
+def test_qwen_code_project_shared_agents_md(run, env_for, fake_home, proj,
+                                            src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "qwen-code", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "qwen-code" in served
+    assert "codex" in served  # the shared block, not a qwen-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

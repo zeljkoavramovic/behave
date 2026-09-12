@@ -1012,3 +1012,15 @@ def test_ascii_alone_launches_tui(run, env_for, fake_home, src_file):
     drop = fake_home / ".claude" / "rules" / "behave.md"
     assert drop.is_file()
     assert drop.read_bytes().startswith(MARKER)
+
+
+# Phase 8 (qwen-code): promoted agent - --list shows qwen-code detected
+# without the "(no install support)" note
+def test_qwen_code_list_install_support(run, env_for, fake_home):
+    (fake_home / ".qwen").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] == "qwen-code"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

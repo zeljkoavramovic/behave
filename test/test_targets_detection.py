@@ -229,3 +229,11 @@ def test_zed_dual_config_dirs(run, env_for, fake_home, src_file):
     assert r2.returncode == 0, r2.stdout + r2.stderr
     for f in both:
         assert not f.exists()
+
+
+# Phase 8 (qwen-code): the ~/.qwen marker detects qwen-code
+def test_qwen_code_detection(run, env_for, fake_home):
+    (fake_home / ".qwen").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "qwen-code" in detected_ids(r.stdout)

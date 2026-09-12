@@ -136,7 +136,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode,minimax-code," \
-                  "kimi-code-cli"
+                  "kimi-code-cli,qwen-code"
     assert agents_list in agents
 
 
@@ -407,6 +407,21 @@ def test_kimi_code_cli_user_remove_round_trip(run, env_for, fake_home,
     target = fake_home / ".kimi-code" / "AGENTS.md"
     assert target.is_file()
     r2 = run(["--remove", "--agent", "kimi-code-cli", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
+
+
+# Phase 8 (qwen-code): --remove round-trip cleans ~/.qwen/QWEN.md
+def test_qwen_code_user_remove_round_trip(run, env_for, fake_home,
+                                          src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "qwen-code", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".qwen" / "QWEN.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "qwen-code", "--scope", "user",
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not target.exists()

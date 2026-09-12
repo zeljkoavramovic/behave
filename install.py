@@ -154,7 +154,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ()},
     {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 3, "flags": ()},
     {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 3, "flags": ()},
-    {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 3, "flags": ()},
+    {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
     {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
     {"id": "reasonix", "env": None, "markers": [("h", ".reasonix")], "tier": 3, "flags": ()},
     {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 3, "flags": ()},
@@ -186,7 +186,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
-    "zcode", "minimax-code", "openclaw", "kimi-code-cli",
+    "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -195,7 +195,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
-              "kimi-code-cli"]
+              "kimi-code-cli", "qwen-code"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -224,6 +224,7 @@ DISPLAY = {
     "minimax-code": "MiniMax Code",
     "openclaw": "OpenClaw",
     "kimi-code-cli": "Kimi Code",
+    "qwen-code": "Qwen Code",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -996,6 +997,17 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["kimi-code-cli"],
                     home_base() / ".kimi-code" / "AGENTS.md",
                     "inline"))
+            elif a == "qwen-code":
+                # qwen-code loads ~/.qwen/QWEN.md every conversation
+                # (memoryDiscovery.ts: the global context file is
+                # always checked, created by the user or /memory).
+                # QWEN_HOME env override exists but detection/install
+                # use the plain home path. Project scope rides the
+                # shared ./AGENTS.md family block (AGENTS.md is in
+                # the default context filename list).
+                targets.append(_mk_target(
+                    ["qwen-code"], home_base() / ".qwen" / "QWEN.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1214,6 +1226,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             "inline", ["openclaw"])
         add(home_base() / ".kimi-code" / "AGENTS.md", "inline",
             ["kimi-code-cli"])
+        add(home_base() / ".qwen" / "QWEN.md", "inline", ["qwen-code"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
