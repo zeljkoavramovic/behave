@@ -792,3 +792,32 @@ def test_qwen_code_project_shared_agents_md(run, env_for, fake_home, proj,
     assert data.startswith(B)
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (trae): user-scope inline block at the top of
+# ~/.trae/user_rules.md (the Trae IDE's global rules file)
+def test_trae_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "trae", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".trae" / "user_rules.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (trae): a pre-existing ~/.trae/user_rules.md keeps its content
+# below the newly prepended block
+def test_trae_user_inline_preserves_existing(run, env_for, fake_home,
+                                             src_file):
+    target = fake_home / ".trae" / "user_rules.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "trae", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1

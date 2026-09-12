@@ -162,7 +162,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 3, "flags": ()},
     {"id": "terramind", "env": None, "markers": [("h", ".terramind")], "tier": 3, "flags": ()},
     {"id": "tinycloud", "env": None, "markers": [("h", ".tinycloud")], "tier": 3, "flags": ()},
-    {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 3, "flags": ()},
+    {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 1, "flags": ()},
     {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 3, "flags": ()},
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
@@ -187,6 +187,7 @@ TIER1_ORDER = [
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
+    "trae",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -225,6 +226,7 @@ DISPLAY = {
     "openclaw": "OpenClaw",
     "kimi-code-cli": "Kimi Code",
     "qwen-code": "Qwen Code",
+    "trae": "Trae",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -237,6 +239,7 @@ DROP_FRONTMATTER = {
     "kilo": "",
     "openhands": "",
     "roo": "",
+    "trae": "---\nalwaysApply: true\n---\n",
 }
 
 # ---------------------------------------------------------------------------
@@ -1008,6 +1011,15 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["qwen-code"], home_base() / ".qwen" / "QWEN.md",
                     "inline"))
+            elif a == "trae":
+                # ~/.trae/user_rules.md is the Trae IDE's global rules
+                # file (docs.trae.ai/ide/rules: "Global rules take
+                # effect in all projects"; the IDE Rules UI creates
+                # this exact file) - inline at the top so existing
+                # user rules survive. Windows: %userprofile%/.trae.
+                targets.append(_mk_target(
+                    ["trae"], home_base() / ".trae" / "user_rules.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1043,6 +1055,14 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
         # never reads project ./AGENTS.md (see the user-scope branch)
         notes.append("warn: openclaw is user-scope only (personal "
                      "workspace); skipping")
+    if "trae" in agents:
+        # trae reads root AGENTS.md/CLAUDE.md only behind an import
+        # toggle (Settings > Rules > Import), so it is NOT a family
+        # agent; the native .trae/rules/ drop is always-on via
+        # alwaysApply (docs.trae.ai/ide/rules).
+        targets.append(_mk_target(
+            ["trae"], project_dir / ".trae" / "rules" / "behave.md",
+            "drop", drop_agent="trae"))
     return targets, notes
 
 
@@ -1227,6 +1247,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".kimi-code" / "AGENTS.md", "inline",
             ["kimi-code-cli"])
         add(home_base() / ".qwen" / "QWEN.md", "inline", ["qwen-code"])
+        add(home_base() / ".trae" / "user_rules.md", "inline", ["trae"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
@@ -1246,6 +1267,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(d / ".github" / "copilot-instructions.md", "inline",
             ["github-copilot"])
         add(d / "GEMINI.md", "inline", ["gemini-cli"])
+        add(d / ".trae" / "rules" / "behave.md", "drop", ["trae"],
+            drop_agent="trae")
 
     findings = []
     for cand in candidates:

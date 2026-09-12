@@ -425,3 +425,32 @@ def test_qwen_code_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not target.exists()
+
+
+# Phase 8 (trae): --remove round-trip cleans ~/.trae/user_rules.md
+def test_trae_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "trae", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".trae" / "user_rules.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "trae", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
+
+
+# Phase 8 (trae): --remove round-trip cleans the project .trae/rules drop
+def test_trae_project_remove_round_trip(run, env_for, fake_home, proj,
+                                        src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "trae", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = proj / ".trae" / "rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "trae", "--scope", "project",
+              "--project-dir", str(proj), "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()
