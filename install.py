@@ -81,7 +81,7 @@ DROP_CONSENT = (
 )
 
 # ---------------------------------------------------------------------------
-# Agent detection table - all 77 entries (INSTALLER-PLAN section 5)
+# Agent detection table (INSTALLER-PLAN section 5)
 # ---------------------------------------------------------------------------
 # Marker bases:
 #   "h" home dir (agent root; env override replaces the whole agent dir)
@@ -107,8 +107,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
     {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
-    {"id": "codemaker", "env": None, "markers": [("h", ".codemaker")], "tier": 3, "flags": ()},
-    {"id": "codestudio", "env": None, "markers": [("h", ".codestudio")], "tier": 3, "flags": ()},
     {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")], "tier": 1, "flags": ()},
     {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 3, "flags": ()},
     {"id": "continue", "env": None, "markers": [("c", ".continue"), ("h", ".continue")], "tier": 3, "flags": ("cwd",)},
@@ -138,18 +136,14 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
     {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ()},
     {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 1, "flags": ()},
-    {"id": "kode", "env": None, "markers": [("h", ".kode")], "tier": 3, "flags": ()},
-    {"id": "lingma", "env": None, "markers": [("h", ".lingma")], "tier": 3, "flags": ()},
     {"id": "loaf", "env": None, "markers": [("h", ".loaf")], "tier": 3, "flags": ()},
     {"id": "mcpjam", "env": None, "markers": [("h", ".mcpjam")], "tier": 3, "flags": ()},
-    {"id": "minimax-code", "env": None, "markers": [("h", ".minimax"), ("p", "/Applications/MiniMax Code.app")], "tier": 1, "flags": ()},
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 1, "flags": ()},
     {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
     {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
     {"id": "omp", "env": None, "markers": [("h", ".omp/agent")], "tier": 1, "flags": ()},
     {"id": "opencode", "env": None, "markers": [("x", "opencode")], "tier": 1, "flags": ()},
     {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 1, "flags": ()},
-    {"id": "ona", "env": None, "markers": [("h", ".ona")], "tier": 2, "flags": ()},
     {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
     {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ()},
     {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 1, "flags": ()},
@@ -168,8 +162,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
     {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ()},
-    {"id": "zencoder", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
-    {"id": "zenflow", "env": None, "markers": [("h", ".zencoder")], "tier": 3, "flags": ()},
     {"id": "neovate", "env": None, "markers": [("h", ".neovate")], "tier": 3, "flags": ()},
     {"id": "pochi", "env": None, "markers": [("h", ".pochi")], "tier": 3, "flags": ()},
     {"id": "promptscript", "env": None, "markers": [("c", ".promptscript"), ("c", "promptscript.yaml")], "tier": 3, "flags": ("cwd",)},
@@ -186,7 +178,7 @@ TIER1_ORDER = [
     "gemini-cli", "github-copilot", "pi", "omp",
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
-    "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
+    "zcode", "openclaw", "kimi-code-cli", "qwen-code",
     "trae", "antigravity", "kiro-cli", "qoder", "grok",
     "mistral-vibe",
     "rovodev",
@@ -201,7 +193,7 @@ TIER1_SET = set(TIER1_ORDER)
 FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
-              "junie", "posit-assistant", "zcode", "minimax-code",
+              "junie", "posit-assistant", "zcode",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli"]
@@ -230,7 +222,6 @@ DISPLAY = {
     "junie": "Junie",
     "posit-assistant": "Posit Assistant",
     "zcode": "ZCode",
-    "minimax-code": "MiniMax Code",
     "openclaw": "OpenClaw",
     "kimi-code-cli": "Kimi Code",
     "qwen-code": "Qwen Code",
@@ -994,14 +985,6 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["zcode"], home_base() / ".zcode" / "AGENTS.md",
                     "inline"))
-            elif a == "minimax-code":
-                # ~/.minimax/AGENTS.md is read by the shipped desktop
-                # bundle but UNDOCUMENTED (TODO-LEFT findings) - wire
-                # nothing on hope; project scope rides the shared
-                # ./AGENTS.md family block.
-                notes.append("warn: minimax-code has no verified "
-                             "user-wide target; skipping (project "
-                             "scope only)")
             elif a == "openclaw":
                 # OpenClaw runs a personal workspace model - it loads
                 # ~/.openclaw/workspace/AGENTS.md (workspace bootstrap,

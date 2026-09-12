@@ -716,33 +716,6 @@ def test_zcode_list_install_support(run, env_for, fake_home):
     assert "(no install support)" not in lines[0]
 
 
-# Phase 3.1 (minimax-code): user scope has no verified target - the
-# warn note fires on stdout and nothing is written (~/.minimax/AGENTS.md
-# is bundle-read but undocumented; notes are say()-only, so no --json)
-def test_minimax_code_user_scope_warn_only(run, env_for, fake_home,
-                                           src_file):
-    r = run(["--agent", "minimax-code", "--scope", "user", "--yes",
-             "--source", str(src_file)], env=env_for(fake_home))
-    assert r.returncode == 0, r.stdout + r.stderr
-    assert ("warn: minimax-code has no verified user-wide target; "
-            "skipping (project scope only)" in r.stdout)
-    assert "nothing to install" in r.stdout
-    assert not (fake_home / ".minimax" / "AGENTS.md").exists()
-
-
-# Phase 3.1 (minimax-code): promoted agent - --list shows minimax-code
-# detected without the "(no install support)" note
-def test_minimax_code_list_install_support(run, env_for, fake_home):
-    (fake_home / ".minimax").mkdir()
-    r = run(["--list"], env=env_for(fake_home))
-    assert r.returncode == 0, r.stdout + r.stderr
-    lines = [ln for ln in r.stdout.splitlines()
-             if ln.strip().split() and ln.strip().split()[0] ==
-             "minimax-code"]
-    assert lines, r.stdout
-    assert "(no install support)" not in lines[0]
-
-
 # Phase 3.1 (openclaw): project scope is warn-only - openclaw never
 # reads project ./AGENTS.md (personal workspace model), so no shared
 # block is written for it (notes are say()-only, so no --json for the

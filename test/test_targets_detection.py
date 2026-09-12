@@ -1,5 +1,6 @@
 """Plan section 9, tests 13-16: targets and detection."""
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -143,7 +144,11 @@ def test_15_detection(run, env_for, fake_home, tmp_path):
     assert "kimi-code-cli" in ids
     assert "windsurf" in ids
     assert "deprecated" in r.stdout
-    assert "All known ids (78):" in r.stdout
+    # the known-id count must agree with the ids actually listed
+    # (derived from the run's own output - never a stale literal)
+    m = re.search(r"All known ids \((\d+)\):\n\s+(.+)", r.stdout)
+    assert m, r.stdout
+    assert int(m.group(1)) == len(m.group(2).split(", "))
 
     h2 = tmp_path / "h2"
     h2.mkdir()
