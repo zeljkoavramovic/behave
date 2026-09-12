@@ -377,3 +377,11 @@ def test_hermes_agent_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "hermes-agent" in detected_ids(r.stdout)
+
+
+# Phase 9 (aider-desk): the ~/.aider-desk marker detects aider-desk
+def test_aider_desk_detection(run, env_for, fake_home):
+    (fake_home / ".aider-desk").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "aider-desk" in detected_ids(r.stdout)

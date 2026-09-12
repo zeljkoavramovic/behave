@@ -138,7 +138,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "warp,junie,posit-assistant,zcode," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
                   "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
-                  "xum,hermes-agent"
+                  "xum,hermes-agent,aider-desk"
     assert agents_list in agents
 
 
@@ -669,3 +669,19 @@ def test_hermes_agent_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()
+
+
+# Phase 9 (aider-desk): --remove round-trip cleans the
+# ~/.aider-desk/rules drop
+def test_aider_desk_user_remove_round_trip(run, env_for, fake_home,
+                                           src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "aider-desk", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".aider-desk" / "rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "aider-desk", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()

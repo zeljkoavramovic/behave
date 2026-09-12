@@ -94,7 +94,7 @@ DROP_CONSENT = (
 #        "content" (package.json content check), "never" (pseudo entry),
 #        "deprecated" (report-only deprecation notice)
 AGENTS: List[Dict[str, Any]] = [
-    {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 3, "flags": ()},
+    {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 1, "flags": ()},
     {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 1, "flags": ()},
     {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 1, "flags": ()},
     {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 1, "flags": ()},
@@ -195,6 +195,7 @@ TIER1_ORDER = [
     "antigravity-cli",
     "xum",
     "hermes-agent",
+    "aider-desk",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -205,7 +206,8 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "junie", "posit-assistant", "zcode",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
-              "cortex", "antigravity-cli", "xum", "hermes-agent"]
+              "cortex", "antigravity-cli", "xum", "hermes-agent",
+              "aider-desk"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -247,6 +249,7 @@ DISPLAY = {
     "antigravity-cli": "Antigravity CLI",
     "xum": "Xum",
     "hermes-agent": "Hermes Agent",
+    "aider-desk": "AiderDesk",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -265,6 +268,7 @@ DROP_FRONTMATTER = {
     "grok": "",
     "bob": "",
     "trae-cn": "---\nalwaysApply: true\n---\n",
+    "aider-desk": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -1191,6 +1195,15 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["hermes-agent"], home_base() / ".hermes" / "SOUL.md",
                     "inline"))
+            elif a == "aider-desk":
+                # AiderDesk (hotovo): user rules at ~/.aider-desk/rules/
+                # are always active - no frontmatter system documented,
+                # bare drop (kiro-cli/qoder/grok/bob precedent). Agent
+                # mode auto-loads the root AGENTS.md, so project scope
+                # rides the shared ./AGENTS.md family block.
+                targets.append(_mk_target(
+                    ["aider-desk"], home_base() / ".aider-desk" /
+                    "rules" / "behave.md", "drop", drop_agent="aider-desk"))
         return targets, notes
 
     # project scope
@@ -1442,6 +1455,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".xum" / "AGENTS.md", "inline", ["xum"])
         add(home_base() / ".hermes" / "SOUL.md", "inline",
             ["hermes-agent"])
+        add(home_base() / ".aider-desk" / "rules" / "behave.md",
+            "drop", ["aider-desk"], drop_agent="aider-desk")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

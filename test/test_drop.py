@@ -270,3 +270,17 @@ def test_openhands_user_drop(run, env_for, fake_home, src_file):
     assert data.startswith(MARKER)
     assert not data.startswith(b"---")
     assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 9 (aider-desk): user-scope drop into ~/.aider-desk/rules (no
+# frontmatter - no activation system documented, always active)
+def test_aider_desk_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "aider-desk", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".aider-desk" / "rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(MARKER)
+    assert not data.startswith(b"---")
+    assert b"# RULES\nrules body line\n" in data

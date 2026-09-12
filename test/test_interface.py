@@ -1155,3 +1155,16 @@ def test_hermes_agent_list_install_support(run, env_for, fake_home):
              "hermes-agent"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 9 (aider-desk): promoted agent - --list shows aider-desk
+# detected without the "(no install support)" note
+def test_aider_desk_list_install_support(run, env_for, fake_home):
+    (fake_home / ".aider-desk").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "aider-desk"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]
