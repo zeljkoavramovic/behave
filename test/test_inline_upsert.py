@@ -865,3 +865,21 @@ def test_antigravity_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (kiro-cli): project scope rides the shared ./AGENTS.md family
+# block (root AGENTS.md is "always included" on all Kiro surfaces)
+def test_kiro_cli_project_shared_agents_md(run, env_for, fake_home, proj,
+                                           src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "kiro-cli", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "kiro-cli" in served
+    assert "codex" in served  # the shared block, not a kiro-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

@@ -256,3 +256,12 @@ def test_antigravity_detection(run, env_for, fake_home):
     ids = detected_ids(r.stdout)
     assert "antigravity" in ids
     assert "antigravity-cli" not in ids
+
+
+# Phase 8 (kiro-cli): the ~/.kiro marker detects kiro-cli (shared by
+# the Kiro IDE and Kiro CLI - the marker means "a Kiro surface")
+def test_kiro_cli_detection(run, env_for, fake_home):
+    (fake_home / ".kiro").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "kiro-cli" in detected_ids(r.stdout)

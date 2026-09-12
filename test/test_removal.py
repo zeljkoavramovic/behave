@@ -136,7 +136,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode,minimax-code," \
-                  "kimi-code-cli,qwen-code,antigravity"
+                  "kimi-code-cli,qwen-code,antigravity,kiro-cli"
     assert agents_list in agents
 
 
@@ -479,3 +479,19 @@ def test_antigravity_shared_gemini_md_remove(run, env_for, fake_home,
               "--yes"], env=env)
     assert r3.returncode == 0, r3.stdout + r3.stderr
     assert not target.exists()
+
+
+# Phase 8 (kiro-cli): --remove round-trip cleans the
+# ~/.kiro/steering drop
+def test_kiro_cli_user_remove_round_trip(run, env_for, fake_home,
+                                         src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "kiro-cli", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".kiro" / "steering" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "kiro-cli", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()

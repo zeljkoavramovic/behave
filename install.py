@@ -137,7 +137,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
     {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
     {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ()},
-    {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 3, "flags": ()},
+    {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 1, "flags": ()},
     {"id": "kode", "env": None, "markers": [("h", ".kode")], "tier": 3, "flags": ()},
     {"id": "lingma", "env": None, "markers": [("h", ".lingma")], "tier": 3, "flags": ()},
     {"id": "loaf", "env": None, "markers": [("h", ".loaf")], "tier": 3, "flags": ()},
@@ -187,7 +187,7 @@ TIER1_ORDER = [
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
-    "trae", "antigravity",
+    "trae", "antigravity", "kiro-cli",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -196,7 +196,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
-              "kimi-code-cli", "qwen-code", "antigravity"]
+              "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -228,6 +228,7 @@ DISPLAY = {
     "qwen-code": "Qwen Code",
     "trae": "Trae",
     "antigravity": "Antigravity",
+    "kiro-cli": "Kiro",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -241,6 +242,7 @@ DROP_FRONTMATTER = {
     "openhands": "",
     "roo": "",
     "trae": "---\nalwaysApply: true\n---\n",
+    "kiro-cli": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -1033,6 +1035,19 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["antigravity"], home_base() / ".gemini" / "GEMINI.md",
                     "inline"))
+            elif a == "kiro-cli":
+                # ~/.kiro/steering/ is Kiro's global steering dir -
+                # "Kiro will automatically load these files in chat
+                # sessions" (kiro.dev/docs/steering); on the CLI,
+                # inclusion modes are not supported at all, and on the
+                # IDE the default inclusion is always, so a bare drop
+                # file needs no frontmatter. Global steering applies
+                # to IDE + CLI only (not Web/Mobile). Project scope
+                # rides the shared ./AGENTS.md family block (root
+                # AGENTS.md is "always included", all surfaces).
+                targets.append(_mk_target(
+                    ["kiro-cli"], home_base() / ".kiro" / "steering" /
+                    "behave.md", "drop", drop_agent="kiro-cli"))
         return targets, notes
 
     # project scope
@@ -1264,6 +1279,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["kimi-code-cli"])
         add(home_base() / ".qwen" / "QWEN.md", "inline", ["qwen-code"])
         add(home_base() / ".trae" / "user_rules.md", "inline", ["trae"])
+        add(home_base() / ".kiro" / "steering" / "behave.md", "drop",
+            ["kiro-cli"], drop_agent="kiro-cli")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

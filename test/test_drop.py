@@ -143,6 +143,21 @@ def test_trae_project_drop(run, env_for, fake_home, proj, src_file):
     assert not (proj / "AGENTS.md").exists()
 
 
+# Phase 8 (kiro-cli): user-scope drop into ~/.kiro/steering (no
+# frontmatter - the CLI ignores inclusion modes, the IDE defaults to
+# always)
+def test_kiro_cli_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "kiro-cli", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".kiro" / "steering" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(MARKER)
+    assert not data.startswith(b"---")
+    assert b"# RULES\nrules body line\n" in data
+
+
 # Phase 3.1 (kilo): user-scope drop into ~/.kilocode/rules (no
 # frontmatter, plain marker + rules body)
 def test_kilo_user_drop(run, env_for, fake_home, src_file):
