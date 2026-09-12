@@ -157,7 +157,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
     {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
     {"id": "reasonix", "env": None, "markers": [("h", ".reasonix")], "tier": 3, "flags": ()},
-    {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 3, "flags": ()},
+    {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 1, "flags": ()},
     {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 1, "flags": ()},
     {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 3, "flags": ()},
     {"id": "terramind", "env": None, "markers": [("h", ".terramind")], "tier": 3, "flags": ()},
@@ -189,6 +189,7 @@ TIER1_ORDER = [
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
     "trae", "antigravity", "kiro-cli", "qoder", "grok",
     "mistral-vibe",
+    "rovodev",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -198,7 +199,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
-              "qoder", "grok", "mistral-vibe"]
+              "qoder", "grok", "mistral-vibe", "rovodev"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -234,6 +235,7 @@ DISPLAY = {
     "qoder": "Qoder",
     "grok": "Grok Build",
     "mistral-vibe": "Mistral Vibe",
+    "rovodev": "Rovo Dev",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1098,6 +1100,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["mistral-vibe"], home_base() / ".vibe" / "AGENTS.md",
                     "inline"))
+            elif a == "rovodev":
+                # Rovo Dev CLI memory: user-wide ~/.rovodev/AGENTS.md
+                # ("applies to all your Rovo Dev CLI sessions") plus
+                # project AGENTS.md + AGENTS.local.md per workspace
+                # (support.atlassian.com/rovo/docs/
+                # use-memory-in-rovo-dev-cli). Project scope rides the
+                # shared ./AGENTS.md family block.
+                targets.append(_mk_target(
+                    ["rovodev"], home_base() / ".rovodev" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1337,6 +1349,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["grok"], drop_agent="grok")
         add(home_base() / ".vibe" / "AGENTS.md", "inline",
             ["mistral-vibe"])
+        add(home_base() / ".rovodev" / "AGENTS.md", "inline", ["rovodev"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

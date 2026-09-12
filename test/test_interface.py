@@ -1097,3 +1097,15 @@ def test_mistral_vibe_list_install_support(run, env_for, fake_home):
              if ln.strip().split() and ln.strip().split()[0] == "mistral-vibe"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 8 batch 2 (rovodev): promoted agent - --list shows rovodev
+# detected without the "(no install support)" note
+def test_rovodev_list_install_support(run, env_for, fake_home):
+    (fake_home / ".rovodev").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] == "rovodev"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

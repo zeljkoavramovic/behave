@@ -954,3 +954,35 @@ def test_mistral_vibe_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 2 (rovodev): user-scope inline into ~/.rovodev/AGENTS.md
+# ("User memory is stored in ~/.rovodev/AGENTS.md... applies to all
+# your Rovo Dev CLI sessions")
+def test_rovodev_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "rovodev", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".rovodev" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 8 batch 2 (rovodev): project scope rides the shared ./AGENTS.md
+# family block (project memory = AGENTS.md + AGENTS.local.md)
+def test_rovodev_project_shared_agents_md(run, env_for, fake_home, proj,
+                                          src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "rovodev", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "rovodev" in served
+    assert "codex" in served  # the shared block, not a rovodev-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
