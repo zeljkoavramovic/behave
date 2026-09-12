@@ -1210,3 +1210,51 @@ def test_forgecode_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (command-code): user-scope inline block at the top of
+# ~/.commandcode/AGENTS.md (the global instructions file)
+def test_command_code_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "command-code", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".commandcode" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (command-code): a pre-existing ~/.commandcode/AGENTS.md keeps
+# its content below the newly prepended block
+def test_command_code_user_inline_preserves_existing(run, env_for,
+                                                     fake_home,
+                                                     src_file):
+    target = fake_home / ".commandcode" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "command-code", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (command-code): project scope rides the shared ./AGENTS.md
+# family block (<root>/AGENTS.md is the default)
+def test_command_code_project_shared_agents_md(run, env_for, fake_home,
+                                               proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "command-code", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "command-code" in served
+    assert "codex" in served  # the shared block, not a command-code-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

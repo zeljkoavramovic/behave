@@ -138,7 +138,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "warp,junie,posit-assistant,zcode," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
                   "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
-                  "xum,hermes-agent,aider-desk,forgecode"
+                  "xum,hermes-agent,aider-desk,forgecode,command-code"
     assert agents_list in agents
 
 
@@ -698,6 +698,22 @@ def test_forgecode_user_remove_round_trip(run, env_for, fake_home,
     p = fake_home / ".forge" / "AGENTS.md"
     assert p.is_file()
     r2 = run(["--remove", "--agent", "forgecode", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()
+
+
+# Phase 9 (command-code): --remove round-trip cleans the
+# ~/.commandcode/AGENTS.md inline block
+def test_command_code_user_remove_round_trip(run, env_for, fake_home,
+                                             src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "command-code", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".commandcode" / "AGENTS.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "command-code", "--scope", "user",
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()

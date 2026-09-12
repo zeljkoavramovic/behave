@@ -394,3 +394,11 @@ def test_forgecode_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "forgecode" in detected_ids(r.stdout)
+
+
+# Phase 9 (command-code): the ~/.commandcode marker detects command-code
+def test_command_code_detection(run, env_for, fake_home):
+    (fake_home / ".commandcode").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "command-code" in detected_ids(r.stdout)
