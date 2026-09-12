@@ -1051,3 +1051,49 @@ def test_antigravity_cli_project_shared_agents_md(run, env_for,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (xum): user-scope inline block at the top of ~/.xum/AGENTS.md
+def test_xum_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "xum", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".xum" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (xum): a pre-existing ~/.xum/AGENTS.md keeps its content
+# below the newly prepended block
+def test_xum_user_inline_preserves_existing(run, env_for, fake_home,
+                                            src_file):
+    target = fake_home / ".xum" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "xum", "--scope", "user", "--yes", "--source",
+             str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (xum): project scope rides the shared ./AGENTS.md family
+# block (reads the shared root AGENTS.md first-match chain)
+def test_xum_project_shared_agents_md(run, env_for, fake_home, proj,
+                                      src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "xum", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "xum" in served
+    assert "codex" in served  # the shared block, not an xum-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

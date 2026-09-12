@@ -137,7 +137,8 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
-                  "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli"
+                  "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
+                  "xum"
     assert agents_list in agents
 
 
@@ -636,4 +637,19 @@ def test_antigravity_cli_user_remove_round_trip(run, env_for, fake_home,
                   "user", "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert "antigravity-cli" in r2.stdout
+    assert not p.exists()
+
+
+# Phase 9 (xum): --remove round-trip cleans the ~/.xum/AGENTS.md
+# inline block
+def test_xum_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "xum", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".xum" / "AGENTS.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "xum", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()

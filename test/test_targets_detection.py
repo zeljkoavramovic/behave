@@ -349,3 +349,22 @@ def test_antigravity_cli_detection(run, env_for, fake_home):
     ids = detected_ids(r.stdout)
     assert "antigravity-cli" in ids
     assert "antigravity" not in ids
+
+
+# Phase 9 (xum): the ~/.xum marker detects xum; the legacy ~/.mux
+# marker (vendor rename cmux -> mux -> xum; xum auto-migrates ~/.mux
+# on startup) detects it too - "mux" is no longer a known id
+def test_xum_detection(run, env_for, fake_home):
+    (fake_home / ".xum").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "xum" in detected_ids(r.stdout)
+
+
+def test_xum_legacy_mux_marker_detection(run, env_for, fake_home):
+    (fake_home / ".mux").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    ids = detected_ids(r.stdout)
+    assert "xum" in ids
+    assert "mux" not in ids

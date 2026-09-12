@@ -140,7 +140,11 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "mcpjam", "env": None, "markers": [("h", ".mcpjam")], "tier": 3, "flags": ()},
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 1, "flags": ()},
     {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
-    {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
+    # xum: the vendor (Coder) renamed cmux -> mux -> xum (shux pending);
+    # the npm "mux" package is a forwarding shim. xum auto-migrates
+    # ~/.mux to ~/.xum on startup - legacy marker kept as secondary
+    # detection.
+    {"id": "xum", "env": None, "markers": [("h", ".xum"), ("h", ".mux")], "tier": 1, "flags": ()},
     {"id": "omp", "env": None, "markers": [("h", ".omp/agent")], "tier": 1, "flags": ()},
     {"id": "opencode", "env": None, "markers": [("x", "opencode")], "tier": 1, "flags": ()},
     {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 1, "flags": ()},
@@ -186,6 +190,7 @@ TIER1_ORDER = [
     "trae-cn",
     "cortex",
     "antigravity-cli",
+    "xum",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -196,7 +201,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "junie", "posit-assistant", "zcode",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
-              "cortex", "antigravity-cli"]
+              "cortex", "antigravity-cli", "xum"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -236,6 +241,7 @@ DISPLAY = {
     "trae-cn": "Trae CN",
     "cortex": "Cortex Code",
     "antigravity-cli": "Antigravity CLI",
+    "xum": "Xum",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1157,6 +1163,17 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["antigravity-cli"],
                     home_base() / ".gemini" / "GEMINI.md", "inline"))
+            elif a == "xum":
+                # xum (Coder; renamed cmux -> mux -> xum) reads
+                # ~/.xum/AGENTS.md as its user instructions file; a
+                # pre-existing file keeps its content below the marked
+                # block (amp/droid precedent). Legacy ~/.mux is
+                # auto-migrated by xum itself - detection-only marker.
+                # Project scope rides the shared ./AGENTS.md family
+                # block (first-match chain from cwd).
+                targets.append(_mk_target(
+                    ["xum"], home_base() / ".xum" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1405,6 +1422,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             "drop", ["trae-cn"], drop_agent="trae-cn")
         add(home_base() / ".snowflake" / "cortex" / "AGENTS.md",
             "inline", ["cortex"])
+        add(home_base() / ".xum" / "AGENTS.md", "inline", ["xum"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
