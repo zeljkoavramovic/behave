@@ -734,3 +734,36 @@ def test_qoder_cn_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()
+
+
+# Phase 9 (tabnine-cli): --remove round-trip cleans the
+# ~/.tabnine/agent/TABNINE.md inline block
+def test_tabnine_cli_user_remove_round_trip(run, env_for, fake_home,
+                                            src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "tabnine-cli", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".tabnine" / "agent" / "TABNINE.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "tabnine-cli", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()
+
+
+# Phase 9 (tabnine-cli): --remove round-trip cleans the project
+# ./TABNINE.md inline block (its own project target)
+def test_tabnine_cli_project_remove_round_trip(run, env_for, fake_home,
+                                               proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "tabnine-cli", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = proj / "TABNINE.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "tabnine-cli", "--scope",
+              "project", "--project-dir", str(proj), "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()

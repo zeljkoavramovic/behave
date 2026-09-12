@@ -1276,3 +1276,53 @@ def test_qoder_cn_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (tabnine-cli): user-scope inline block at the top of
+# ~/.tabnine/agent/TABNINE.md (the agent/ dir is created if absent)
+def test_tabnine_cli_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "tabnine-cli", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".tabnine" / "agent" / "TABNINE.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (tabnine-cli): a pre-existing ~/.tabnine/agent/TABNINE.md
+# keeps its content below the newly prepended block
+def test_tabnine_cli_user_inline_preserves_existing(run, env_for,
+                                                    fake_home,
+                                                    src_file):
+    target = fake_home / ".tabnine" / "agent" / "TABNINE.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "tabnine-cli", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (tabnine-cli): project scope writes its OWN ./TABNINE.md
+# inline block (tabnine reads TABNINE.md, not AGENTS.md - gemini-cli
+# GEMINI.md precedent; the shared family path is never written)
+def test_tabnine_cli_project_own_tabnine_md(run, env_for, fake_home,
+                                            proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "tabnine-cli", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert served == ["tabnine-cli"]  # own target, not the family block
+    data = (proj / "TABNINE.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert not (proj / "AGENTS.md").exists()

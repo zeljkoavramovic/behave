@@ -413,3 +413,11 @@ def test_qoder_cn_detection(run, env_for, fake_home):
     ids = detected_ids(r.stdout)
     assert "qoder-cn" in ids
     assert "qoder" not in ids
+
+
+# Phase 9 (tabnine-cli): the ~/.tabnine marker detects tabnine-cli
+def test_tabnine_cli_detection(run, env_for, fake_home):
+    (fake_home / ".tabnine").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "tabnine-cli" in detected_ids(r.stdout)

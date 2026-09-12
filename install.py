@@ -165,7 +165,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "reasonix", "env": None, "markers": [("h", ".reasonix")], "tier": 3, "flags": ()},
     {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 1, "flags": ()},
     {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 1, "flags": ()},
-    {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 3, "flags": ()},
+    {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 1, "flags": ()},
     {"id": "terramind", "env": None, "markers": [("h", ".terramind")], "tier": 3, "flags": ()},
     {"id": "tinycloud", "env": None, "markers": [("h", ".tinycloud")], "tier": 3, "flags": ()},
     {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 1, "flags": ()},
@@ -204,6 +204,7 @@ TIER1_ORDER = [
     "forgecode",
     "command-code",
     "qoder-cn",
+    "tabnine-cli",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -261,6 +262,7 @@ DISPLAY = {
     "forgecode": "ForgeCode",
     "command-code": "Command Code",
     "qoder-cn": "Qoder CN",
+    "tabnine-cli": "Tabnine CLI",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1246,6 +1248,18 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["qoder-cn"], home_base() / ".qoder-cn" / "rules" /
                     "behave.md", "drop", drop_agent="qoder-cn"))
+            elif a == "tabnine-cli":
+                # Tabnine CLI: ~/.tabnine/agent/TABNINE.md is the
+                # user-level instructions file (the agent/ dir is
+                # created if absent) - inline block at the top so
+                # existing content survives. Project scope writes its
+                # OWN ./TABNINE.md target, NOT the shared AGENTS.md
+                # family block - tabnine reads TABNINE.md, not
+                # AGENTS.md (gemini-cli GEMINI.md precedent).
+                targets.append(_mk_target(
+                    ["tabnine-cli"],
+                    home_base() / ".tabnine" / "agent" / "TABNINE.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1272,6 +1286,11 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
     if "gemini-cli" in agents:
         targets.append(_mk_target(
             ["gemini-cli"], project_dir / "GEMINI.md", "inline"))
+    if "tabnine-cli" in agents:
+        # tabnine reads TABNINE.md, not AGENTS.md - its own project
+        # target, NOT the shared family block (gemini-cli precedent)
+        targets.append(_mk_target(
+            ["tabnine-cli"], project_dir / "TABNINE.md", "inline"))
     if "github-copilot" in agents:
         targets.append(_mk_target(
             ["github-copilot"],
@@ -1505,6 +1524,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["command-code"])
         add(home_base() / ".qoder-cn" / "rules" / "behave.md",
             "drop", ["qoder-cn"], drop_agent="qoder-cn")
+        add(home_base() / ".tabnine" / "agent" / "TABNINE.md",
+            "inline", ["tabnine-cli"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
@@ -1524,6 +1545,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(d / ".github" / "copilot-instructions.md", "inline",
             ["github-copilot"])
         add(d / "GEMINI.md", "inline", ["gemini-cli"])
+        add(d / "TABNINE.md", "inline", ["tabnine-cli"])
         add(d / ".trae" / "rules" / "behave.md", "drop",
             ["trae", "trae-cn"], drop_agent="trae")
 
