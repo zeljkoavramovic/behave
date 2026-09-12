@@ -127,7 +127,10 @@ AGENTS: List[Dict[str, Any]] = [
     # config under %APPDATA%\Block\goose there, not under ~/.config).
     {"id": "goose", "env": None, "markers": [("x", "goose"), ("a", "Block/goose")], "tier": 1, "flags": ()},
     {"id": "grok", "env": "GROK_HOME", "markers": [("h", ".grok")], "tier": 1, "flags": ()},
-    {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 3, "flags": ()},
+    # hermes-agent: HERMES_HOME override exists but detection/install
+    # use the plain ~/.hermes path (qwen-code precedent); the Windows
+    # native default is %LOCALAPPDATA%\hermes - marker stays ~/.hermes.
+    {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 1, "flags": ()},
     {"id": "inference-sh", "env": None, "markers": [("h", ".inferencesh")], "tier": 3, "flags": ()},
     {"id": "jazz", "env": None, "markers": [("h", ".jazz"), ("c", ".jazz")], "tier": 3, "flags": ()},
     {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
@@ -191,6 +194,7 @@ TIER1_ORDER = [
     "cortex",
     "antigravity-cli",
     "xum",
+    "hermes-agent",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -201,7 +205,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "junie", "posit-assistant", "zcode",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
-              "cortex", "antigravity-cli", "xum"]
+              "cortex", "antigravity-cli", "xum", "hermes-agent"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -242,6 +246,7 @@ DISPLAY = {
     "cortex": "Cortex Code",
     "antigravity-cli": "Antigravity CLI",
     "xum": "Xum",
+    "hermes-agent": "Hermes Agent",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1174,6 +1179,18 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["xum"], home_base() / ".xum" / "AGENTS.md",
                     "inline"))
+            elif a == "hermes-agent":
+                # Hermes Agent (Nous Research): ~/.hermes/SOUL.md is the
+                # identity file loaded every session - inline block at
+                # the top so existing content survives (create if
+                # absent). HERMES_HOME exists but install uses the
+                # plain path (qwen-code precedent); Windows native
+                # default is %LOCALAPPDATA%\hermes - marker stays
+                # ~/.hermes. Project scope rides the shared ./AGENTS.md
+                # family block (AGENTS.md is in its project chain).
+                targets.append(_mk_target(
+                    ["hermes-agent"], home_base() / ".hermes" / "SOUL.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1423,6 +1440,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".snowflake" / "cortex" / "AGENTS.md",
             "inline", ["cortex"])
         add(home_base() / ".xum" / "AGENTS.md", "inline", ["xum"])
+        add(home_base() / ".hermes" / "SOUL.md", "inline",
+            ["hermes-agent"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

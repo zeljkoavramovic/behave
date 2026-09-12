@@ -368,3 +368,12 @@ def test_xum_legacy_mux_marker_detection(run, env_for, fake_home):
     ids = detected_ids(r.stdout)
     assert "xum" in ids
     assert "mux" not in ids
+
+
+# Phase 9 (hermes-agent): the ~/.hermes marker detects hermes-agent
+# (HERMES_HOME overrides the whole dir per the registry env field)
+def test_hermes_agent_detection(run, env_for, fake_home):
+    (fake_home / ".hermes").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "hermes-agent" in detected_ids(r.stdout)

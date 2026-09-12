@@ -1142,3 +1142,16 @@ def test_xum_list_install_support(run, env_for, fake_home):
              if ln.strip().split() and ln.strip().split()[0] == "xum"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 9 (hermes-agent): promoted agent - --list shows hermes-agent
+# detected without the "(no install support)" note
+def test_hermes_agent_list_install_support(run, env_for, fake_home):
+    (fake_home / ".hermes").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "hermes-agent"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]
