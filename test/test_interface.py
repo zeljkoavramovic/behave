@@ -1145,3 +1145,15 @@ def test_cortex_list_install_support(run, env_for, fake_home):
              if ln.strip().split() and ln.strip().split()[0] == "cortex"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 8 batch 2 (antigravity-cli): promoted agent - --list shows
+# antigravity-cli detected without the "(no install support)" note
+def test_antigravity_cli_list_install_support(run, env_for, fake_home):
+    (fake_home / ".gemini" / "antigravity-cli").mkdir(parents=True)
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] == "antigravity-cli"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

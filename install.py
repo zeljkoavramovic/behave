@@ -97,7 +97,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 3, "flags": ()},
     {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 1, "flags": ()},
     {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 1, "flags": ()},
-    {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 3, "flags": ()},
+    {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 1, "flags": ()},
     {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
     {"id": "autohand-code", "env": "AUTOHAND_HOME", "markers": [("h", ".autohand")], "tier": 3, "flags": ()},
     {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
@@ -193,6 +193,7 @@ TIER1_ORDER = [
     "bob",
     "trae-cn",
     "cortex",
+    "antigravity-cli",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -203,7 +204,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "junie", "posit-assistant", "zcode", "minimax-code",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
-              "cortex"]
+              "cortex", "antigravity-cli"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -243,6 +244,7 @@ DISPLAY = {
     "bob": "IBM Bob",
     "trae-cn": "Trae CN",
     "cortex": "Cortex Code",
+    "antigravity-cli": "Antigravity CLI",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1158,6 +1160,20 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["cortex"],
                     home_base() / ".snowflake" / "cortex" / "AGENTS.md",
                     "inline"))
+            elif a == "antigravity-cli":
+                # Antigravity CLI (the Gemini CLI successor) keeps the
+                # same context-file rules: "The agent automatically
+                # consults and enforces your global constraints
+                # located at ~/.gemini/GEMINI.md" and parses workspace
+                # GEMINI.md + AGENTS.md (/docs/cli/gcli-migration,
+                # "Context files and workspace rules"). Third
+                # shared-file reader with gemini-cli + antigravity;
+                # the marked block is idempotent and the removal
+                # candidate lists all three. Project scope rides the
+                # shared ./AGENTS.md family block.
+                targets.append(_mk_target(
+                    ["antigravity-cli"],
+                    home_base() / ".gemini" / "GEMINI.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1355,10 +1371,10 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             add(d / "AGENTS.md", "inline", ["devin"])
         add(home_base() / ".cursor" / "rules" / "behave.mdc", "drop",
             ["cursor"], drop_agent="cursor")
-        # shared ~/.gemini/GEMINI.md: gemini-cli + antigravity (and the
-        # antigravity-cli reader) - one candidate, both agents, one block
+        # shared ~/.gemini/GEMINI.md: gemini-cli + antigravity +
+        # antigravity-cli - one candidate, three readers, one block
         add(home_base() / ".gemini" / "GEMINI.md", "inline",
-            ["gemini-cli", "antigravity"])
+            ["gemini-cli", "antigravity", "antigravity-cli"])
         add(home_base() / ".copilot" / "instructions" / "behave.instructions.md",
             "drop", ["github-copilot"], drop_agent="github-copilot")
         add(home_base() / ".roo" / "rules" / "behave.md", "drop", ["roo"],

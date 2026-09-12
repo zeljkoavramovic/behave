@@ -1037,3 +1037,37 @@ def test_cortex_project_shared_agents_md(run, env_for, fake_home, proj,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 2 (antigravity-cli): user-scope inline into the SHARED
+# ~/.gemini/GEMINI.md ("The agent automatically consults and enforces
+# your global constraints located at ~/.gemini/GEMINI.md")
+def test_antigravity_cli_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "antigravity-cli", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".gemini" / "GEMINI.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 8 batch 2 (antigravity-cli): project scope rides the shared
+# ./AGENTS.md family block (workspace GEMINI.md + AGENTS.md both
+# parsed; the family block covers the AGENTS.md side)
+def test_antigravity_cli_project_shared_agents_md(run, env_for,
+                                                  fake_home, proj,
+                                                  src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "antigravity-cli", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "antigravity-cli" in served
+    assert "codex" in served  # the shared block, not an agy-cli-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
