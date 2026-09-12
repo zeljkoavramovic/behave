@@ -285,3 +285,12 @@ def test_grok_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "grok" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 2 (mistral-vibe): the ~/.vibe marker detects
+# mistral-vibe (VIBE_HOME overrides per the registry env field)
+def test_mistral_vibe_detection(run, env_for, fake_home):
+    (fake_home / ".vibe").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "mistral-vibe" in detected_ids(r.stdout)

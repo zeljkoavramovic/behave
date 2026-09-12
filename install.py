@@ -143,7 +143,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "loaf", "env": None, "markers": [("h", ".loaf")], "tier": 3, "flags": ()},
     {"id": "mcpjam", "env": None, "markers": [("h", ".mcpjam")], "tier": 3, "flags": ()},
     {"id": "minimax-code", "env": None, "markers": [("h", ".minimax"), ("p", "/Applications/MiniMax Code.app")], "tier": 1, "flags": ()},
-    {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 3, "flags": ()},
+    {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 1, "flags": ()},
     {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
     {"id": "mux", "env": None, "markers": [("h", ".mux")], "tier": 3, "flags": ()},
     {"id": "omp", "env": None, "markers": [("h", ".omp/agent")], "tier": 1, "flags": ()},
@@ -188,6 +188,7 @@ TIER1_ORDER = [
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
     "trae", "antigravity", "kiro-cli", "qoder", "grok",
+    "mistral-vibe",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -197,7 +198,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
-              "qoder", "grok"]
+              "qoder", "grok", "mistral-vibe"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -232,6 +233,7 @@ DISPLAY = {
     "kiro-cli": "Kiro",
     "qoder": "Qoder",
     "grok": "Grok Build",
+    "mistral-vibe": "Mistral Vibe",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1083,6 +1085,19 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["grok"], home_base() / ".grok" / "rules" /
                     "behave.md", "drop", drop_agent="grok"))
+            elif a == "mistral-vibe":
+                # Mistral Vibe loads up to two AGENTS.md files into
+                # context: the user-level ~/.vibe/AGENTS.md (or in
+                # $VIBE_HOME if set) and the first project AGENTS.md
+                # walking up from cwd, trusted folders only
+                # (docs.mistral.ai/vibe/code/cli/agents; OSS repo
+                # mistralai/mistral-vibe). VIBE_HOME exists but
+                # detection/install use the plain home path (qwen-code
+                # precedent). Project scope rides the shared
+                # ./AGENTS.md family block.
+                targets.append(_mk_target(
+                    ["mistral-vibe"], home_base() / ".vibe" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1320,6 +1335,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["qoder"], drop_agent="qoder")
         add(home_base() / ".grok" / "rules" / "behave.md", "drop",
             ["grok"], drop_agent="grok")
+        add(home_base() / ".vibe" / "AGENTS.md", "inline",
+            ["mistral-vibe"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

@@ -908,7 +908,7 @@ def test_qoder_project_shared_agents_md(run, env_for, fake_home, proj,
 # block (grok reads the AGENTS.md filename family repo-root to cwd,
 # deeper files taking precedence)
 def test_grok_project_shared_agents_md(run, env_for, fake_home, proj,
-                                       src_file):
+                                        src_file):
     env = env_for(fake_home)
     r = run(["--agent", "grok", "--scope", "project",
              "--project-dir", str(proj), "--yes", "--json", "--source",
@@ -918,6 +918,39 @@ def test_grok_project_shared_agents_md(run, env_for, fake_home, proj,
     served = payload["targets"][0]["agent"].split(",")
     assert "grok" in served
     assert "codex" in served  # the shared block, not a grok-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 2 (mistral-vibe): user-scope inline into
+# ~/.vibe/AGENTS.md ("User-level: ~/.vibe/AGENTS.md (or in $VIBE_HOME
+# if set)")
+def test_mistral_vibe_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "mistral-vibe", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".vibe" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 8 batch 2 (mistral-vibe): project scope rides the shared
+# ./AGENTS.md family block (first AGENTS.md walking up from cwd,
+# trusted folders only)
+def test_mistral_vibe_project_shared_agents_md(run, env_for, fake_home,
+                                               proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "mistral-vibe", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "mistral-vibe" in served
+    assert "codex" in served  # the shared block, not a vibe-only one
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
