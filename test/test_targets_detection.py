@@ -265,3 +265,14 @@ def test_kiro_cli_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "kiro-cli" in detected_ids(r.stdout)
+
+
+# Phase 8 (qoder): the ~/.qoder marker detects qoder (the qoder-cn
+# sibling entry stays tier 3)
+def test_qoder_detection(run, env_for, fake_home):
+    (fake_home / ".qoder").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    ids = detected_ids(r.stdout)
+    assert "qoder" in ids
+    assert "qoder-cn" not in ids

@@ -152,7 +152,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "ona", "env": None, "markers": [("h", ".ona")], "tier": 2, "flags": ()},
     {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
     {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ()},
-    {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 3, "flags": ()},
+    {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 1, "flags": ()},
     {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 3, "flags": ()},
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
     {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
@@ -187,7 +187,7 @@ TIER1_ORDER = [
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
-    "trae", "antigravity", "kiro-cli",
+    "trae", "antigravity", "kiro-cli", "qoder",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -196,7 +196,8 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
-              "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli"]
+              "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
+              "qoder"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -229,6 +230,7 @@ DISPLAY = {
     "trae": "Trae",
     "antigravity": "Antigravity",
     "kiro-cli": "Kiro",
+    "qoder": "Qoder",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -243,6 +245,7 @@ DROP_FRONTMATTER = {
     "roo": "",
     "trae": "---\nalwaysApply: true\n---\n",
     "kiro-cli": "",
+    "qoder": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -1048,6 +1051,20 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["kiro-cli"], home_base() / ".kiro" / "steering" /
                     "behave.md", "drop", drop_agent="kiro-cli"))
+            elif a == "qoder":
+                # User-level rules at ~/.qoder/rules/ apply to every
+                # project and "when no loading-related frontmatter is
+                # configured, rules are always active by default"
+                # (docs.qoder.com/cli/memory - documented, unlike the
+                # qwen-code equivalent). ~/.qoder/AGENTS.md is the
+                # other user surface; the drop file keeps behave in
+                # its own file. Project scope rides the shared
+                # ./AGENTS.md family block ("AGENTS.md is the default
+                # context file name", loaded at session start inside
+                # a trusted workspace).
+                targets.append(_mk_target(
+                    ["qoder"], home_base() / ".qoder" / "rules" /
+                    "behave.md", "drop", drop_agent="qoder"))
         return targets, notes
 
     # project scope
@@ -1281,6 +1298,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".trae" / "user_rules.md", "inline", ["trae"])
         add(home_base() / ".kiro" / "steering" / "behave.md", "drop",
             ["kiro-cli"], drop_agent="kiro-cli")
+        add(home_base() / ".qoder" / "rules" / "behave.md", "drop",
+            ["qoder"], drop_agent="qoder")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
