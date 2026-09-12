@@ -119,7 +119,10 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
     {"id": "eve", "env": None, "markers": [], "tier": 3, "flags": ("content", "cwd")},
     {"id": "firebender", "env": None, "markers": [("h", ".firebender")], "tier": 3, "flags": ()},
-    {"id": "forgecode", "env": None, "markers": [("h", ".forge")], "tier": 3, "flags": ()},
+    # forgecode: FORGE_CONFIG override exists but detection/install use
+    # the plain ~/.forge path; the legacy ~/forge dir is presence-only,
+    # not a marker.
+    {"id": "forgecode", "env": None, "markers": [("h", ".forge")], "tier": 1, "flags": ()},
     {"id": "gemini-cli", "env": None, "markers": [("h", ".gemini")], "tier": 1, "flags": ()},
     {"id": "github-copilot", "env": None, "markers": [("h", ".copilot")], "tier": 1, "flags": ()},
     # goose: the ("a", "Block/goose") marker matches the install target -
@@ -196,6 +199,7 @@ TIER1_ORDER = [
     "xum",
     "hermes-agent",
     "aider-desk",
+    "forgecode",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -207,7 +211,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
-              "aider-desk"]
+              "aider-desk", "forgecode"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -250,6 +254,7 @@ DISPLAY = {
     "xum": "Xum",
     "hermes-agent": "Hermes Agent",
     "aider-desk": "AiderDesk",
+    "forgecode": "ForgeCode",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1204,6 +1209,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["aider-desk"], home_base() / ".aider-desk" /
                     "rules" / "behave.md", "drop", drop_agent="aider-desk"))
+            elif a == "forgecode":
+                # ForgeCode (Tailcall): ~/.forge/AGENTS.md is the global
+                # instructions file - inline block at the top so
+                # existing content survives. FORGE_CONFIG exists but
+                # install uses the plain path; legacy ~/forge is
+                # presence-only, not a marker. Project scope rides the
+                # shared ./AGENTS.md family block.
+                targets.append(_mk_target(
+                    ["forgecode"], home_base() / ".forge" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1457,6 +1472,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["hermes-agent"])
         add(home_base() / ".aider-desk" / "rules" / "behave.md",
             "drop", ["aider-desk"], drop_agent="aider-desk")
+        add(home_base() / ".forge" / "AGENTS.md", "inline",
+            ["forgecode"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

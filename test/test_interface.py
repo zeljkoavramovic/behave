@@ -1168,3 +1168,16 @@ def test_aider_desk_list_install_support(run, env_for, fake_home):
              "aider-desk"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 9 (forgecode): promoted agent - --list shows forgecode detected
+# without the "(no install support)" note
+def test_forgecode_list_install_support(run, env_for, fake_home):
+    (fake_home / ".forge").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "forgecode"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

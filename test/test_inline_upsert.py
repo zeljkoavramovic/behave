@@ -1163,3 +1163,50 @@ def test_aider_desk_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (forgecode): user-scope inline block at the top of
+# ~/.forge/AGENTS.md (the global instructions file)
+def test_forgecode_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "forgecode", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".forge" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (forgecode): a pre-existing ~/.forge/AGENTS.md keeps its
+# content below the newly prepended block
+def test_forgecode_user_inline_preserves_existing(run, env_for,
+                                                  fake_home, src_file):
+    target = fake_home / ".forge" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "forgecode", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 9 (forgecode): project scope rides the shared ./AGENTS.md
+# family block
+def test_forgecode_project_shared_agents_md(run, env_for, fake_home,
+                                            proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "forgecode", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "forgecode" in served
+    assert "codex" in served  # the shared block, not a forgecode-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

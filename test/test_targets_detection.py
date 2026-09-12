@@ -385,3 +385,12 @@ def test_aider_desk_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "aider-desk" in detected_ids(r.stdout)
+
+
+# Phase 9 (forgecode): the ~/.forge marker detects forgecode (legacy
+# ~/forge is presence-only, never a marker)
+def test_forgecode_detection(run, env_for, fake_home):
+    (fake_home / ".forge").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "forgecode" in detected_ids(r.stdout)

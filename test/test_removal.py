@@ -138,7 +138,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "warp,junie,posit-assistant,zcode," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
                   "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
-                  "xum,hermes-agent,aider-desk"
+                  "xum,hermes-agent,aider-desk,forgecode"
     assert agents_list in agents
 
 
@@ -685,3 +685,19 @@ def test_aider_desk_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()
+
+
+# Phase 9 (forgecode): --remove round-trip cleans the ~/.forge/AGENTS.md
+# inline block
+def test_forgecode_user_remove_round_trip(run, env_for, fake_home,
+                                          src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "forgecode", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".forge" / "AGENTS.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "forgecode", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()
