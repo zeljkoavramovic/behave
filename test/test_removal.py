@@ -136,7 +136,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode,minimax-code," \
-                  "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder"
+                  "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder,grok"
     assert agents_list in agents
 
 
@@ -506,6 +506,20 @@ def test_qoder_user_remove_round_trip(run, env_for, fake_home, src_file):
     drop = fake_home / ".qoder" / "rules" / "behave.md"
     assert drop.is_file()
     r2 = run(["--remove", "--agent", "qoder", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()
+
+
+# Phase 8 (grok): --remove round-trip cleans the ~/.grok/rules drop
+def test_grok_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "grok", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".grok" / "rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "grok", "--scope", "user", "--yes"],
              env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()

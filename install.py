@@ -128,7 +128,7 @@ AGENTS: List[Dict[str, Any]] = [
     # Windows detection missed goose while it was XDG-only (goose stores
     # config under %APPDATA%\Block\goose there, not under ~/.config).
     {"id": "goose", "env": None, "markers": [("x", "goose"), ("a", "Block/goose")], "tier": 1, "flags": ()},
-    {"id": "grok", "env": "GROK_HOME", "markers": [("h", ".grok")], "tier": 3, "flags": ()},
+    {"id": "grok", "env": "GROK_HOME", "markers": [("h", ".grok")], "tier": 1, "flags": ()},
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 3, "flags": ()},
     {"id": "inference-sh", "env": None, "markers": [("h", ".inferencesh")], "tier": 3, "flags": ()},
     {"id": "jazz", "env": None, "markers": [("h", ".jazz"), ("c", ".jazz")], "tier": 3, "flags": ()},
@@ -187,7 +187,7 @@ TIER1_ORDER = [
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
-    "trae", "antigravity", "kiro-cli", "qoder",
+    "trae", "antigravity", "kiro-cli", "qoder", "grok",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -197,7 +197,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
-              "qoder"]
+              "qoder", "grok"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -231,6 +231,7 @@ DISPLAY = {
     "antigravity": "Antigravity",
     "kiro-cli": "Kiro",
     "qoder": "Qoder",
+    "grok": "Grok Build",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -246,6 +247,7 @@ DROP_FRONTMATTER = {
     "trae": "---\nalwaysApply: true\n---\n",
     "kiro-cli": "",
     "qoder": "",
+    "grok": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -1065,6 +1067,22 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["qoder"], home_base() / ".qoder" / "rules" /
                     "behave.md", "drop", drop_agent="qoder"))
+            elif a == "grok":
+                # Grok Build (xAI, binary `grok`) scans $GROK_HOME (or
+                # ~/.grok) unconditionally: named files + rules/*.md
+                # at the home root, no off switch (agents_md.rs
+                # L187-302; docs.x.ai/build/features/project-rules).
+                # rules/*.md bodies are frontmatter-stripped, so a
+                # bare drop works. Project scope rides the shared
+                # ./AGENTS.md family block (repo-root-to-cwd chain,
+                # deeper files win). CAVEAT: the third-party
+                # superagent-ai/grok-cli also writes ~/.grok (no
+                # GROK_HOME) - the marker can false-positive; GROK_HOME
+                # is the disambiguator (kept, marker/target divergence
+                # precedent).
+                targets.append(_mk_target(
+                    ["grok"], home_base() / ".grok" / "rules" /
+                    "behave.md", "drop", drop_agent="grok"))
         return targets, notes
 
     # project scope
@@ -1300,6 +1318,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["kiro-cli"], drop_agent="kiro-cli")
         add(home_base() / ".qoder" / "rules" / "behave.md", "drop",
             ["qoder"], drop_agent="qoder")
+        add(home_base() / ".grok" / "rules" / "behave.md", "drop",
+            ["grok"], drop_agent="grok")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

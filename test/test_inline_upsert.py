@@ -902,3 +902,22 @@ def test_qoder_project_shared_agents_md(run, env_for, fake_home, proj,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (grok): project scope rides the shared ./AGENTS.md family
+# block (grok reads the AGENTS.md filename family repo-root to cwd,
+# deeper files taking precedence)
+def test_grok_project_shared_agents_md(run, env_for, fake_home, proj,
+                                       src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "grok", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "grok" in served
+    assert "codex" in served  # the shared block, not a grok-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

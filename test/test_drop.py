@@ -172,6 +172,21 @@ def test_qoder_user_drop(run, env_for, fake_home, src_file):
     assert b"# RULES\nrules body line\n" in data
 
 
+# Phase 8 (grok): user-scope drop into ~/.grok/rules (no frontmatter -
+# the home rules dir is scanned unconditionally; bodies are
+# frontmatter-stripped)
+def test_grok_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "grok", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".grok" / "rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(MARKER)
+    assert not data.startswith(b"---")
+    assert b"# RULES\nrules body line\n" in data
+
+
 # Phase 3.1 (kilo): user-scope drop into ~/.kilocode/rules (no
 # frontmatter, plain marker + rules body)
 def test_kilo_user_drop(run, env_for, fake_home, src_file):
