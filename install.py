@@ -163,7 +163,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "terramind", "env": None, "markers": [("h", ".terramind")], "tier": 3, "flags": ()},
     {"id": "tinycloud", "env": None, "markers": [("h", ".tinycloud")], "tier": 3, "flags": ()},
     {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 1, "flags": ()},
-    {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 3, "flags": ()},
+    {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 1, "flags": ()},
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
@@ -191,6 +191,7 @@ TIER1_ORDER = [
     "mistral-vibe",
     "rovodev",
     "bob",
+    "trae-cn",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -238,6 +239,7 @@ DISPLAY = {
     "mistral-vibe": "Mistral Vibe",
     "rovodev": "Rovo Dev",
     "bob": "IBM Bob",
+    "trae-cn": "Trae CN",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -255,6 +257,7 @@ DROP_FRONTMATTER = {
     "qoder": "",
     "grok": "",
     "bob": "",
+    "trae-cn": "---\nalwaysApply: true\n---\n",
 }
 
 # ---------------------------------------------------------------------------
@@ -1125,6 +1128,19 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["bob"], home_base() / ".bob" / "rules" / "behave.md",
                     "drop", drop_agent="bob"))
+            elif a == "trae-cn":
+                # Trae CN (docs.trae.cn/work_rules, TraeWork docs):
+                # global rules live under ~/.trae-cn/user_rules/ - the
+                # CN docs word it as a rules DIRECTORY (win
+                # %userprofile%/.trae-cn/user_rules), unlike the intl
+                # edition's single user_rules.md file; drop with
+                # alwaysApply like the project rules. Root AGENTS.md is
+                # toggle-gated + TraeWork-desktop-only -> NOT a family
+                # agent (intl precedent).
+                targets.append(_mk_target(
+                    ["trae-cn"],
+                    home_base() / ".trae-cn" / "user_rules" / "behave.md",
+                    "drop", drop_agent="trae-cn"))
         return targets, notes
 
     # project scope
@@ -1160,14 +1176,16 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
         # never reads project ./AGENTS.md (see the user-scope branch)
         notes.append("warn: openclaw is user-scope only (personal "
                      "workspace); skipping")
-    if "trae" in agents:
+    if "trae" in agents or "trae-cn" in agents:
         # trae reads root AGENTS.md/CLAUDE.md only behind an import
         # toggle (Settings > Rules > Import), so it is NOT a family
         # agent; the native .trae/rules/ drop is always-on via
-        # alwaysApply (docs.trae.ai/ide/rules).
+        # alwaysApply (docs.trae.ai/ide/rules). trae-cn reads the
+        # SAME project rules dir (docs.trae.cn/work_rules) - one drop
+        # serves both editions.
         targets.append(_mk_target(
-            ["trae"], project_dir / ".trae" / "rules" / "behave.md",
-            "drop", drop_agent="trae"))
+            ["trae", "trae-cn"], project_dir / ".trae" / "rules" /
+            "behave.md", "drop", drop_agent="trae"))
     return targets, notes
 
 
@@ -1367,6 +1385,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".rovodev" / "AGENTS.md", "inline", ["rovodev"])
         add(home_base() / ".bob" / "rules" / "behave.md", "drop",
             ["bob"], drop_agent="bob")
+        add(home_base() / ".trae-cn" / "user_rules" / "behave.md",
+            "drop", ["trae-cn"], drop_agent="trae-cn")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
@@ -1386,8 +1406,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(d / ".github" / "copilot-instructions.md", "inline",
             ["github-copilot"])
         add(d / "GEMINI.md", "inline", ["gemini-cli"])
-        add(d / ".trae" / "rules" / "behave.md", "drop", ["trae"],
-            drop_agent="trae")
+        add(d / ".trae" / "rules" / "behave.md", "drop",
+            ["trae", "trae-cn"], drop_agent="trae")
 
     findings = []
     for cand in candidates:

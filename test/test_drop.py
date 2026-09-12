@@ -201,6 +201,35 @@ def test_bob_user_drop(run, env_for, fake_home, src_file):
     assert b"# RULES\nrules body line\n" in data
 
 
+# Phase 8 batch 2 (trae-cn): user-scope drop into ~/.trae-cn/user_rules/
+# (the CN global rules dir; alwaysApply frontmatter like the project
+# drop - docs.trae.cn/work_rules)
+def test_trae_cn_user_drop(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "trae-cn", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".trae-cn" / "user_rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(b"---\nalwaysApply: true\n---\n")
+    assert b"# RULES\nrules body line\n" in data
+
+
+# Phase 8 batch 2 (trae-cn): project-scope drop SHARES .trae/rules with
+# trae (one file, two editions; the root AGENTS.md family path is never
+# written - CN import toggle is off by default, desktop-only)
+def test_trae_cn_project_drop(run, env_for, fake_home, proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "trae-cn", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = proj / ".trae" / "rules" / "behave.md"
+    data = drop.read_bytes()
+    assert data.startswith(b"---\nalwaysApply: true\n---\n")
+    assert b"# RULES\nrules body line\n" in data
+    assert not (proj / "AGENTS.md").exists()
+
+
 # Phase 3.1 (kilo): user-scope drop into ~/.kilocode/rules (no
 # frontmatter, plain marker + rules body)
 def test_kilo_user_drop(run, env_for, fake_home, src_file):

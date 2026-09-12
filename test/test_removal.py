@@ -571,3 +571,36 @@ def test_bob_user_remove_round_trip(run, env_for, fake_home, src_file):
              env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()
+
+
+# Phase 8 batch 2 (trae-cn): --remove round-trip cleans the
+# ~/.trae-cn/user_rules drop
+def test_trae_cn_user_remove_round_trip(run, env_for, fake_home,
+                                        src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "trae-cn", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".trae-cn" / "user_rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "trae-cn", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()
+
+
+# Phase 8 batch 2 (trae-cn): --remove round-trip cleans the SHARED
+# .trae/rules project drop (the removal candidate serves both editions)
+def test_trae_cn_project_remove_round_trip(run, env_for, fake_home,
+                                           proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "trae-cn", "--scope", "project", "--project-dir",
+             str(proj), "--yes", "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = proj / ".trae" / "rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "trae-cn", "--scope", "project",
+              "--project-dir", str(proj), "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert "trae-cn" in r2.stdout
+    assert not drop.exists()

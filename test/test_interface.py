@@ -1121,3 +1121,15 @@ def test_bob_list_install_support(run, env_for, fake_home):
              if ln.strip().split() and ln.strip().split()[0] == "bob"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 8 batch 2 (trae-cn): promoted agent - --list shows trae-cn
+# detected without the "(no install support)" note
+def test_trae_cn_list_install_support(run, env_for, fake_home):
+    (fake_home / ".trae-cn").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] == "trae-cn"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

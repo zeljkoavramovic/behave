@@ -312,3 +312,14 @@ def test_bob_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "bob" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 2 (trae-cn): the ~/.trae-cn marker detects trae-cn
+# (the intl ~/.trae marker stays a separate agent)
+def test_trae_cn_detection(run, env_for, fake_home):
+    (fake_home / ".trae-cn").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    ids = detected_ids(r.stdout)
+    assert "trae-cn" in ids
+    assert "trae" not in ids
