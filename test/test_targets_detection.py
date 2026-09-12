@@ -303,3 +303,12 @@ def test_rovodev_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "rovodev" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 2 (bob): the ~/.bob marker detects bob (IBM Bob IDE;
+# user rules at ~/.bob/rules apply across all projects)
+def test_bob_detection(run, env_for, fake_home):
+    (fake_home / ".bob").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "bob" in detected_ids(r.stdout)

@@ -137,7 +137,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode,minimax-code," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
-                  "grok,mistral-vibe,rovodev"
+                  "grok,mistral-vibe,rovodev,bob"
     assert agents_list in agents
 
 
@@ -556,3 +556,18 @@ def test_rovodev_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()
+
+
+# Phase 8 batch 2 (bob): --remove round-trip cleans the ~/.bob/rules
+# drop
+def test_bob_user_remove_round_trip(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "bob", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    drop = fake_home / ".bob" / "rules" / "behave.md"
+    assert drop.is_file()
+    r2 = run(["--remove", "--agent", "bob", "--scope", "user", "--yes"],
+             env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not drop.exists()

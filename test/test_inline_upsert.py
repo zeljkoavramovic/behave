@@ -986,3 +986,22 @@ def test_rovodev_project_shared_agents_md(run, env_for, fake_home, proj,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 2 (bob): project scope rides the shared ./AGENTS.md
+# family block (root AGENTS.md "Automatically loaded by default",
+# opt-out only)
+def test_bob_project_shared_agents_md(run, env_for, fake_home, proj,
+                                      src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "bob", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "bob" in served
+    assert "codex" in served  # the shared block, not a bob-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

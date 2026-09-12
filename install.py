@@ -101,7 +101,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
     {"id": "autohand-code", "env": "AUTOHAND_HOME", "markers": [("h", ".autohand")], "tier": 3, "flags": ()},
     {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
-    {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 3, "flags": ()},
+    {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 1, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
     {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ()},
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
@@ -190,6 +190,7 @@ TIER1_ORDER = [
     "trae", "antigravity", "kiro-cli", "qoder", "grok",
     "mistral-vibe",
     "rovodev",
+    "bob",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -199,7 +200,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
-              "qoder", "grok", "mistral-vibe", "rovodev"]
+              "qoder", "grok", "mistral-vibe", "rovodev", "bob"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -236,6 +237,7 @@ DISPLAY = {
     "grok": "Grok Build",
     "mistral-vibe": "Mistral Vibe",
     "rovodev": "Rovo Dev",
+    "bob": "IBM Bob",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -252,6 +254,7 @@ DROP_FRONTMATTER = {
     "kiro-cli": "",
     "qoder": "",
     "grok": "",
+    "bob": "",
 }
 
 # ---------------------------------------------------------------------------
@@ -1110,6 +1113,18 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["rovodev"], home_base() / ".rovodev" / "AGENTS.md",
                     "inline"))
+            elif a == "bob":
+                # IBM Bob rules: user-global ~/.bob/rules/*.md "Apply
+                # automatically across all your projects" (plain text
+                # files, recursive + alphabetical; no frontmatter
+                # activation system documented - bare drop,
+                # kiro-cli/qoder/grok precedent). Project scope rides
+                # the shared ./AGENTS.md family block (root AGENTS.md
+                # "Automatically loaded by default", opt-out only via
+                # "bob-code.useAgentRules": false).
+                targets.append(_mk_target(
+                    ["bob"], home_base() / ".bob" / "rules" / "behave.md",
+                    "drop", drop_agent="bob"))
         return targets, notes
 
     # project scope
@@ -1350,6 +1365,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".vibe" / "AGENTS.md", "inline",
             ["mistral-vibe"])
         add(home_base() / ".rovodev" / "AGENTS.md", "inline", ["rovodev"])
+        add(home_base() / ".bob" / "rules" / "behave.md", "drop",
+            ["bob"], drop_agent="bob")
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
