@@ -96,7 +96,7 @@ DROP_CONSENT = (
 AGENTS: List[Dict[str, Any]] = [
     {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 3, "flags": ()},
     {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 1, "flags": ()},
-    {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 3, "flags": ()},
+    {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 1, "flags": ()},
     {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 3, "flags": ()},
     {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
     {"id": "autohand-code", "env": "AUTOHAND_HOME", "markers": [("h", ".autohand")], "tier": 3, "flags": ()},
@@ -187,7 +187,7 @@ TIER1_ORDER = [
     "roo", "augment", "kilo", "droid", "deepagents", "cline", "crush",
     "amp", "goose", "zed", "openhands", "warp", "junie", "posit-assistant",
     "zcode", "minimax-code", "openclaw", "kimi-code-cli", "qwen-code",
-    "trae",
+    "trae", "antigravity",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -196,7 +196,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "roo", "augment", "kilo", "droid", "deepagents", "cline",
               "crush", "amp", "goose", "zed", "openhands", "warp",
               "junie", "posit-assistant", "zcode", "minimax-code",
-              "kimi-code-cli", "qwen-code"]
+              "kimi-code-cli", "qwen-code", "antigravity"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -227,6 +227,7 @@ DISPLAY = {
     "kimi-code-cli": "Kimi Code",
     "qwen-code": "Qwen Code",
     "trae": "Trae",
+    "antigravity": "Antigravity",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1020,6 +1021,18 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["trae"], home_base() / ".trae" / "user_rules.md",
                     "inline"))
+            elif a == "antigravity":
+                # antigravity reads the SAME global file as gemini-cli
+                # ("Global rules live in ~/.gemini/GEMINI.md and are
+                # applied across all workspaces" - antigravity.google
+                # /docs/ide/rules + /docs/rules-workflows). Shared-file
+                # case, warp ~/.agents/AGENTS.md precedent: the marked
+                # block is idempotent, so selecting both agents writes
+                # one block; --remove cleans it for both (the removal
+                # candidate lists gemini-cli AND antigravity).
+                targets.append(_mk_target(
+                    ["antigravity"], home_base() / ".gemini" / "GEMINI.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1215,7 +1228,10 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             add(d / "AGENTS.md", "inline", ["devin"])
         add(home_base() / ".cursor" / "rules" / "behave.mdc", "drop",
             ["cursor"], drop_agent="cursor")
-        add(home_base() / ".gemini" / "GEMINI.md", "inline", ["gemini-cli"])
+        # shared ~/.gemini/GEMINI.md: gemini-cli + antigravity (and the
+        # antigravity-cli reader) - one candidate, both agents, one block
+        add(home_base() / ".gemini" / "GEMINI.md", "inline",
+            ["gemini-cli", "antigravity"])
         add(home_base() / ".copilot" / "instructions" / "behave.instructions.md",
             "drop", ["github-copilot"], drop_agent="github-copilot")
         add(home_base() / ".roo" / "rules" / "behave.md", "drop", ["roo"],

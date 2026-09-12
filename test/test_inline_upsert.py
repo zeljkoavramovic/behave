@@ -821,3 +821,47 @@ def test_trae_user_inline_preserves_existing(run, env_for, fake_home,
     assert data.startswith(B)
     assert b"MY NOTES" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (antigravity): user-scope inline block at the top of
+# ~/.gemini/GEMINI.md - the SAME file gemini-cli targets (shared file,
+# one idempotent block serves both readers)
+def test_antigravity_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "antigravity", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".gemini" / "GEMINI.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (antigravity): installing gemini-cli AND antigravity user
+# scope yields exactly ONE block in the shared ~/.gemini/GEMINI.md
+def test_antigravity_shared_gemini_md_one_block(run, env_for, fake_home,
+                                                src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "gemini-cli,antigravity", "--scope", "user",
+             "--yes", "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".gemini" / "GEMINI.md").read_bytes()
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 (antigravity): project scope rides the shared ./AGENTS.md
+# family block (root AGENTS.md auto-parsed, official CLI/2.0 docs +
+# changelog 2.11.0)
+def test_antigravity_project_shared_agents_md(run, env_for, fake_home,
+                                              proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "antigravity", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "antigravity" in served
+    assert "codex" in served  # the shared block, not an antigravity-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

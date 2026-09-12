@@ -136,7 +136,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
     agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode,minimax-code," \
-                  "kimi-code-cli,qwen-code"
+                  "kimi-code-cli,qwen-code,antigravity"
     assert agents_list in agents
 
 
@@ -454,3 +454,28 @@ def test_trae_project_remove_round_trip(run, env_for, fake_home, proj,
               "--project-dir", str(proj), "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not drop.exists()
+
+
+# Phase 8 (antigravity): --remove --agent antigravity cleans the shared
+# ~/.gemini/GEMINI.md block (one block served gemini-cli + antigravity);
+# --remove --agent gemini-cli finds the same shared candidate
+def test_antigravity_shared_gemini_md_remove(run, env_for, fake_home,
+                                             src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "antigravity", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    target = fake_home / ".gemini" / "GEMINI.md"
+    assert target.is_file()
+    r2 = run(["--remove", "--agent", "antigravity", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not target.exists()
+    # gemini-cli removal path on the same shared candidate still works
+    run(["--agent", "gemini-cli", "--scope", "user", "--yes", "--source",
+         str(src_file)], env=env)
+    assert target.is_file()
+    r3 = run(["--remove", "--agent", "gemini-cli", "--scope", "user",
+              "--yes"], env=env)
+    assert r3.returncode == 0, r3.stdout + r3.stderr
+    assert not target.exists()
