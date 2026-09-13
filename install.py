@@ -107,6 +107,11 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
     {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
+    # codebuff: the CLI writes ~/.config/manicode (legacy vendor name;
+    # rebranding traces codebuff -> freebuff in the source);
+    # FREEBUFF_CONFIG_DIR exists but the plain path is used, and
+    # ~/.codebuff is NOT written - x-marker like opencode/crush.
+    {"id": "codebuff", "env": None, "markers": [("x", "manicode")], "tier": 1, "flags": ()},
     {"id": "codewhale", "env": "CODEWHALE_HOME", "markers": [("h", ".codewhale")], "tier": 1, "flags": ()},
     {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")], "tier": 1, "flags": ()},
     {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 1, "flags": ()},
@@ -209,6 +214,7 @@ TIER1_ORDER = [
     "tabnine-cli",
     "codewhale",
     "jcode",
+    "codebuff",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -221,7 +227,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
               "aider-desk", "forgecode", "command-code", "qoder-cn",
-              "codewhale", "jcode"]
+              "codewhale", "jcode", "codebuff"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -270,6 +276,7 @@ DISPLAY = {
     "tabnine-cli": "Tabnine CLI",
     "codewhale": "Codewhale",
     "jcode": "jcode",
+    "codebuff": "Codebuff",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1296,6 +1303,20 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["jcode"], home_base() / ".jcode" / "prompt-overlay.md",
                     "inline"))
+            elif a == "codebuff":
+                # Codebuff (npm CLI): user knowledge files are
+                # ~/.AGENTS.md > ~/.CLAUDE.md - first found only,
+                # case-insensitive, loaded every session (sdk
+                # run-state.ts loadUserKnowledgeFiles); ~/.knowledge.md
+                # left the priority list in current source despite the
+                # docs. BARE home dotfile - first of its kind, but the
+                # same inline-upsert mechanics: create ~/.AGENTS.md if
+                # absent, preserve existing content, marked block at
+                # the top. Project scope rides the shared ./AGENTS.md
+                # family block (root AGENTS.md/CLAUDE.md injected as
+                # "Project instructions").
+                targets.append(_mk_target(
+                    ["codebuff"], home_base() / ".AGENTS.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1566,6 +1587,7 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             ["codewhale"])
         add(home_base() / ".jcode" / "prompt-overlay.md", "inline",
             ["jcode"])
+        add(home_base() / ".AGENTS.md", "inline", ["codebuff"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

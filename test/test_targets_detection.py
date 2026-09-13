@@ -437,3 +437,12 @@ def test_jcode_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "jcode" in detected_ids(r.stdout)
+
+
+# Phase 10 (codebuff): the ~/.config/manicode marker (legacy vendor
+# dir name) detects codebuff - x-marker like opencode/crush
+def test_codebuff_detection(run, env_for, fake_home):
+    (fake_home / ".config" / "manicode").mkdir(parents=True)
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "codebuff" in detected_ids(r.stdout)

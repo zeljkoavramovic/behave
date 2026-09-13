@@ -1246,3 +1246,16 @@ def test_jcode_list_install_support(run, env_for, fake_home):
              "jcode"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 10 (codebuff): promoted agent - --list shows codebuff detected
+# without the "(no install support)" note
+def test_codebuff_list_install_support(run, env_for, fake_home):
+    (fake_home / ".config" / "manicode").mkdir(parents=True)
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "codebuff"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]
