@@ -107,6 +107,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
     {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
+    {"id": "codewhale", "env": "CODEWHALE_HOME", "markers": [("h", ".codewhale")], "tier": 1, "flags": ()},
     {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")], "tier": 1, "flags": ()},
     {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 1, "flags": ()},
     {"id": "continue", "env": None, "markers": [("c", ".continue"), ("h", ".continue")], "tier": 3, "flags": ("cwd",)},
@@ -205,6 +206,7 @@ TIER1_ORDER = [
     "command-code",
     "qoder-cn",
     "tabnine-cli",
+    "codewhale",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -216,7 +218,8 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
-              "aider-desk", "forgecode", "command-code", "qoder-cn"]
+              "aider-desk", "forgecode", "command-code", "qoder-cn",
+              "codewhale"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -263,6 +266,7 @@ DISPLAY = {
     "command-code": "Command Code",
     "qoder-cn": "Qoder CN",
     "tabnine-cli": "Tabnine CLI",
+    "codewhale": "Codewhale",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1260,6 +1264,21 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["tabnine-cli"],
                     home_base() / ".tabnine" / "agent" / "TABNINE.md",
                     "inline"))
+            elif a == "codewhale":
+                # Codewhale (Hmbown; Rust CLI) checks the global
+                # ~/.codewhale/AGENTS.md every session and merges it
+                # with the project one - global prepended, project gets
+                # the last word (source #1157) - so the marked block
+                # rides at the top (amp/droid precedent; file created
+                # if absent). Real $HOME path, NOT a
+                # CODEWHALE_HOME-redirected one. Aggregate 48 KiB
+                # instruction budget trims the broadest scope first -
+                # the block stays small by design. Project scope rides
+                # the shared ./AGENTS.md family block (AGENTS.md
+                # canonical, CLAUDE.md fallbacks).
+                targets.append(_mk_target(
+                    ["codewhale"], home_base() / ".codewhale" / "AGENTS.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1526,6 +1545,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             "drop", ["qoder-cn"], drop_agent="qoder-cn")
         add(home_base() / ".tabnine" / "agent" / "TABNINE.md",
             "inline", ["tabnine-cli"])
+        add(home_base() / ".codewhale" / "AGENTS.md", "inline",
+            ["codewhale"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

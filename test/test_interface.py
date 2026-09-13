@@ -1220,3 +1220,16 @@ def test_tabnine_cli_list_install_support(run, env_for, fake_home):
              "tabnine-cli"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 10 (codewhale): promoted agent - --list shows codewhale
+# detected without the "(no install support)" note
+def test_codewhale_list_install_support(run, env_for, fake_home):
+    (fake_home / ".codewhale").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "codewhale"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

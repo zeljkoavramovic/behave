@@ -1326,3 +1326,51 @@ def test_tabnine_cli_project_own_tabnine_md(run, env_for, fake_home,
     assert b"# RULES\nrules body line\n" in data
     assert data.count(b"<!-- BEGIN behave ") == 1
     assert not (proj / "AGENTS.md").exists()
+
+
+# Phase 10 (codewhale): user-scope inline block at the top of
+# ~/.codewhale/AGENTS.md (the global AGENTS.md, merged with the
+# project one every session)
+def test_codewhale_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "codewhale", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".codewhale" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 10 (codewhale): a pre-existing ~/.codewhale/AGENTS.md keeps its
+# content below the newly prepended block
+def test_codewhale_user_inline_preserves_existing(run, env_for,
+                                                  fake_home, src_file):
+    target = fake_home / ".codewhale" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "codewhale", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 10 (codewhale): project scope rides the shared ./AGENTS.md
+# family block (AGENTS.md canonical, CLAUDE.md fallbacks)
+def test_codewhale_project_shared_agents_md(run, env_for, fake_home,
+                                            proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "codewhale", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "codewhale" in served
+    assert "codex" in served  # the shared block, not a codewhale-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
