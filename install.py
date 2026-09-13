@@ -137,6 +137,7 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 1, "flags": ()},
     {"id": "inference-sh", "env": None, "markers": [("h", ".inferencesh")], "tier": 3, "flags": ()},
     {"id": "jazz", "env": None, "markers": [("h", ".jazz"), ("c", ".jazz")], "tier": 3, "flags": ()},
+    {"id": "jcode", "env": "JCODE_HOME", "markers": [("h", ".jcode")], "tier": 1, "flags": ()},
     {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
     {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ()},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
@@ -207,6 +208,7 @@ TIER1_ORDER = [
     "qoder-cn",
     "tabnine-cli",
     "codewhale",
+    "jcode",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -219,7 +221,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
               "aider-desk", "forgecode", "command-code", "qoder-cn",
-              "codewhale"]
+              "codewhale", "jcode"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -267,6 +269,7 @@ DISPLAY = {
     "qoder-cn": "Qoder CN",
     "tabnine-cli": "Tabnine CLI",
     "codewhale": "Codewhale",
+    "jcode": "jcode",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1279,6 +1282,20 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["codewhale"], home_base() / ".codewhale" / "AGENTS.md",
                     "inline"))
+            elif a == "jcode":
+                # jcode (1jehuang; Rust harness): ~/.jcode/
+                # prompt-overlay.md is the jcode-scoped global - the
+                # "Global Prompt Overlay", prepended to every session.
+                # The bare ~/AGENTS.md is ALSO read globally but is
+                # skipped as a shared cross-agent surface - the
+                # overlay is chosen deliberately. JCODE_HOME exists
+                # but detection/install use the plain home path
+                # (qwen-code precedent). Project scope rides the
+                # shared ./AGENTS.md family block (the default
+                # chain).
+                targets.append(_mk_target(
+                    ["jcode"], home_base() / ".jcode" / "prompt-overlay.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1547,6 +1564,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             "inline", ["tabnine-cli"])
         add(home_base() / ".codewhale" / "AGENTS.md", "inline",
             ["codewhale"])
+        add(home_base() / ".jcode" / "prompt-overlay.md", "inline",
+            ["jcode"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

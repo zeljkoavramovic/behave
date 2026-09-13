@@ -139,7 +139,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
                   "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
                   "xum,hermes-agent,aider-desk,forgecode,command-code," \
-                  "qoder-cn,codewhale"
+                  "qoder-cn,codewhale,jcode"
     assert agents_list in agents
 
 
@@ -780,6 +780,22 @@ def test_codewhale_user_remove_round_trip(run, env_for, fake_home,
     p = fake_home / ".codewhale" / "AGENTS.md"
     assert p.is_file()
     r2 = run(["--remove", "--agent", "codewhale", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()
+
+
+# Phase 10 (jcode): --remove round-trip cleans the
+# ~/.jcode/prompt-overlay.md inline block
+def test_jcode_user_remove_round_trip(run, env_for, fake_home,
+                                      src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "jcode", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".jcode" / "prompt-overlay.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "jcode", "--scope", "user",
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()
