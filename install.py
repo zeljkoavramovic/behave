@@ -177,7 +177,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
     {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ()},
-    {"id": "neovate", "env": None, "markers": [("h", ".neovate")], "tier": 3, "flags": ()},
     # pochi: user-global rules = ~/.pochi/README.pochi.md ONLY (the
     # single fixed GlobalRules path, default-on every session;
     # AGENTS.md is NOT loaded at user level); at project level BOTH
