@@ -1259,3 +1259,16 @@ def test_codebuff_list_install_support(run, env_for, fake_home):
              "codebuff"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 8 batch 5 (kimchi): promoted agent - --list shows kimchi
+# detected without the "(no install support)" note
+def test_kimchi_list_install_support(run, env_for, fake_home):
+    (fake_home / ".config" / "kimchi").mkdir(parents=True)
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "kimchi"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]

@@ -1469,3 +1469,53 @@ def test_codebuff_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (kimchi): user-scope inline block at the top of
+# ~/.config/kimchi/harness/AGENTS.md (the global context file loaded
+# every session before project files; the harness/ dir is created if
+# absent)
+def test_kimchi_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "kimchi", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".config" / "kimchi" / "harness" /
+            "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (kimchi): a pre-existing harness/AGENTS.md keeps its
+# content below the newly prepended block
+def test_kimchi_user_inline_preserves_existing(run, env_for, fake_home,
+                                               src_file):
+    target = fake_home / ".config" / "kimchi" / "harness" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "kimchi", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (kimchi): project scope rides the shared ./AGENTS.md
+# family block (AGENTS.md/CLAUDE.md walk cwd->root)
+def test_kimchi_project_shared_agents_md(run, env_for, fake_home,
+                                         proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "kimchi", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "kimchi" in served
+    assert "codex" in served  # the shared block, not a kimchi-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

@@ -141,7 +141,12 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
     {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ("deprecated",)},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
-    {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
+    # kimchi: entry.ts hardcodes homedir()/.config/kimchi/harness and
+    # force-sets its env vars (KIMCHI_CODING_AGENT_DIR etc. - overrides
+    # are clobbered), so no env is registered; the plain home path is
+    # the only real target (amp .config precedent - home_base(), not
+    # XDG; %USERPROFILE%\.config\kimchi on Windows, no APPDATA).
+    {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 1, "flags": ()},
     {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ()},
     {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 1, "flags": ()},
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 1, "flags": ()},
@@ -204,6 +209,7 @@ TIER1_ORDER = [
     "codewhale",
     "jcode",
     "codebuff",
+    "kimchi",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -216,7 +222,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
               "aider-desk", "forgecode", "command-code", "qoder-cn",
-              "codewhale", "jcode", "codebuff"]
+              "codewhale", "jcode", "codebuff", "kimchi"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -266,6 +272,7 @@ DISPLAY = {
     "codewhale": "Codewhale",
     "jcode": "jcode",
     "codebuff": "Codebuff",
+    "kimchi": "Kimchi",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1306,6 +1313,22 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 # "Project instructions").
                 targets.append(_mk_target(
                     ["codebuff"], home_base() / ".AGENTS.md", "inline"))
+            elif a == "kimchi":
+                # Kimchi (CAST AI): the global context file
+                # ~/.config/kimchi/harness/AGENTS.md is loaded EVERY
+                # session, before project files (context-files.ts);
+                # entry.ts hardcodes homedir()/.config/kimchi/harness
+                # and force-sets its env vars, so overrides are
+                # clobbered - no env registered, plain home path only
+                # (amp precedent: home_base()/".config", NOT
+                # xdg_base(); %USERPROFILE%\.config\kimchi on Windows,
+                # no APPDATA). Project scope rides the shared
+                # ./AGENTS.md family block (AGENTS.md/CLAUDE.md walk
+                # cwd->root).
+                targets.append(_mk_target(
+                    ["kimchi"],
+                    home_base() / ".config" / "kimchi" / "harness" /
+                    "AGENTS.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1577,6 +1600,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".jcode" / "prompt-overlay.md", "inline",
             ["jcode"])
         add(home_base() / ".AGENTS.md", "inline", ["codebuff"])
+        add(home_base() / ".config" / "kimchi" / "harness" / "AGENTS.md",
+            "inline", ["kimchi"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

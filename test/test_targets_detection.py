@@ -446,3 +446,13 @@ def test_codebuff_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "codebuff" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 5 (kimchi): the ~/.config/kimchi marker detects kimchi
+# ("h" marker - kimchi hardcodes homedir()/.config/kimchi, so the home
+# base is correct cross-platform and XDG/APPDATA never apply)
+def test_kimchi_detection(run, env_for, fake_home):
+    (fake_home / ".config" / "kimchi").mkdir(parents=True)
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "kimchi" in detected_ids(r.stdout)
