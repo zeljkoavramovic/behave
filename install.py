@@ -62,7 +62,7 @@ import sys
 import tempfile
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Union
 
 CANONICAL_URL = (
     "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md"
@@ -2604,7 +2604,8 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
 
 
 def _arrow_menu(reader, title, rows, multi=False, checked=(),
-                footer="", on_text=None, empty_msg=None):
+                footer: Union[str, Callable[[], str]] = "",
+                on_text=None, empty_msg=None):
     """The rung-2 menu widget: same items as the numbered prompt, plus a
     cursor.  Up/Down move, Space toggles [x] (multi), Enter accepts,
     Backspace edits, printable keys build a typed buffer submitted to
@@ -2616,7 +2617,9 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
 
     Returns ("done", value): the cursor index (single choice), the
     checked bool list (multi), or on_text's value for a typed buffer;
-    or ("esc", None)."""
+    or ("esc", None).  footer may be a zero-arg callable - it is
+    evaluated on every redraw so a menu whose state changes mid-flight
+    (the agent picker's a-toggle) can reword its own hint."""
     vt = _vt_ok()
     pos = 0
     # multi: keep the CALLER's list object, not a copy - the agent
@@ -2627,7 +2630,8 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     status = ""
     prev = 0
     while True:
-        block = _menu_block(title, rows, pos, checked, multi, footer,
+        block = _menu_block(title, rows, pos, checked, multi,
+                            footer() if callable(footer) else footer,
                             buf, status, vt)
         _menu_write(vt, prev, block)
         prev = len(block)
@@ -2772,7 +2776,10 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
     place by that expansion (the in-place protocol below explains
     why).  Enter with an empty buffer submits the checked rows;
     typed buffers go through the same _parse_selection grammar as the
-    numbered prompt.  Returns None when the user pressed Esc - the
+    numbered prompt; a toggles all/none of the SHOWN rows only - it
+    can never check (and install into) an agent that was not
+    detected; l first expands the view when every supported agent is
+    really wanted.  Returns None when the user pressed Esc - the
     caller walks back to the previous menu."""
     pre = set(prechecked_ids)
     rows = [_agent_menu_row(i, a, det_map)
@@ -2790,6 +2797,13 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
                    for i, a in enumerate(visible, 1)]
         checked[:] = [a in pre for a in visible]
 
+    def footer():
+        # a = all/none: the hint names what 'a' would do NEXT, so it
+        # flips with the checkbox state instead of promising a fixed
+        # "all" that stopped being true two keypresses ago.
+        state = "none" if checked and all(checked) else "all"
+        return "  a = %s, l = list all, q = quit" % state
+
     def on_text(buf):
         if buf.strip().lower() in ("q", "quit"):
             raise QuitTUI()
@@ -2798,7 +2812,13 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
             expand()
             return _MENU_AGAIN
         if res == "all":
-            return list(tier1)
+            # owner 2026-09-14: 'a' used to return every supported
+            # agent, which installed (and left dirs behind for)
+            # agents that were never detected.  It now toggles the
+            # SHOWN rows like one big Space press; l + a still
+            # reaches every supported agent when that is wanted.
+            checked[:] = [not all(checked)] * len(visible)
+            return _MENU_AGAIN
         if res == "default":
             if pre:
                 return [a for a in tier1 if a in pre]
@@ -2816,12 +2836,12 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         ["Install into which agents?  (Space toggles [x]; Enter = the "
          "checked items;",
          "Esc = back to the previous menu; typing also works: numbers (3), "
-         "ranges (4-7), lists (2,5); a = all, l = list all, q = quit)"],
+         "ranges (4-7), lists (2,5); l = list all, q = quit)"],
         rows, multi=True, checked=checked,
-        footer="  a = all, l = list all, q = quit",
+        footer=footer,
         on_text=on_text,
         empty_msg="nothing is checked: Space toggles rows, or type 'a' + "
-                  "Enter for all")
+                  "Enter for all shown")
     if kind == "esc":
         return None
     if isinstance(value, list) and value and isinstance(value[0], bool):
@@ -2857,14 +2877,18 @@ def _pick_agents(reader, prechecked_ids, det_map):
         ans = _inp(
             reader,
             "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
-            "Enter = checked/detected, a = all %d, l = list all, "
-            "q = quit)\n> " % (n, len(tier1)))
+            "Enter = checked/detected, a = all shown, l = list all, "
+            "q = quit)\n> " % n)
         res = _parse_selection(ans, n)
         if res == "list":
             visible[:] = tier1
             continue
         if res == "all":
-            return list(tier1)
+            # widget parity (owner 2026-09-14): 'a' selects the SHOWN
+            # rows - never a hidden undetected agent.  The numbered
+            # prompt is one-shot (no [x] state to flip), so selecting
+            # none = typing only the numbers you want.
+            return list(visible)
         if res == "default":
             if prechecked_ids:
                 return [a for a in tier1 if a in prechecked_ids]
