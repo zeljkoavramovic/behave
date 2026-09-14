@@ -315,7 +315,7 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
     assert "Space toggles" not in r.stdout
-    assert "typed numbers / a / l / q still work" not in r.stdout
+    assert "typing also works" not in r.stdout
     # no ANSI escape sequences anywhere (widget redraw is the only emitter)
     assert "\x1b[" not in r.stdout
     assert "Traceback" not in combined

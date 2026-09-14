@@ -2840,11 +2840,10 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         reader,
         ["Install into which agents?  (Space toggles [x]; Enter = the "
          "checked items;",
-         "typed numbers / a / l / q still work; Esc = back to the "
-         "previous menu)"],
+         "Esc = back to the previous menu; typing also works: numbers (3), "
+         "ranges (4-7), lists (2,5); a = all, l = list all, q = quit)"],
         rows, multi=True, checked=checked,
-        footer="  or type numbers (3), ranges (4-7), lists (2,5), "
-               "a, l, q + Enter",
+        footer="  a = all, l = list all, q = quit",
         on_text=on_text,
         empty_msg="nothing is checked: Space toggles rows, or type 'a' + "
                   "Enter for all")
@@ -2883,7 +2882,7 @@ def _pick_agents(reader, prechecked_ids, det_map):
         ans = _inp(
             reader,
             "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
-            "Enter = checked/detected, a = all %d, l = show all, "
+            "Enter = checked/detected, a = all %d, l = list all, "
             "q = quit)\n> " % (n, len(tier1)))
         res = _parse_selection(ans, n)
         if res == "list":
