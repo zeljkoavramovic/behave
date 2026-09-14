@@ -99,13 +99,11 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 1, "flags": ()},
     {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 1, "flags": ()},
     {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
-    {"id": "autohand-code", "env": "AUTOHAND_HOME", "markers": [("h", ".autohand")], "tier": 3, "flags": ()},
     {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
     {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 1, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
     {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ()},
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
-    {"id": "codearts-agent", "env": None, "markers": [("h", ".codeartsdoer")], "tier": 3, "flags": ()},
     {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
     # codebuff: the CLI writes ~/.config/manicode (legacy vendor name;
     # rebranding traces codebuff -> freebuff in the source);
@@ -121,10 +119,8 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
     {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
     {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
-    {"id": "dexto", "env": None, "markers": [("h", ".dexto")], "tier": 3, "flags": ()},
     {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
     {"id": "eve", "env": None, "markers": [], "tier": 3, "flags": ("content", "cwd")},
-    {"id": "firebender", "env": None, "markers": [("h", ".firebender")], "tier": 3, "flags": ()},
     # forgecode: FORGE_CONFIG override exists but detection/install use
     # the plain ~/.forge path; the legacy ~/forge dir is presence-only,
     # not a marker.
@@ -140,19 +136,15 @@ AGENTS: List[Dict[str, Any]] = [
     # use the plain ~/.hermes path (qwen-code precedent); the Windows
     # native default is %LOCALAPPDATA%\hermes - marker stays ~/.hermes.
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 1, "flags": ()},
-    {"id": "inference-sh", "env": None, "markers": [("h", ".inferencesh")], "tier": 3, "flags": ()},
     {"id": "jazz", "env": None, "markers": [("h", ".jazz"), ("c", ".jazz")], "tier": 3, "flags": ()},
     {"id": "jcode", "env": "JCODE_HOME", "markers": [("h", ".jcode")], "tier": 1, "flags": ()},
     {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
-    {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ()},
+    {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ("deprecated",)},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
     {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 3, "flags": ()},
     {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ()},
     {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 1, "flags": ()},
-    {"id": "loaf", "env": None, "markers": [("h", ".loaf")], "tier": 3, "flags": ()},
-    {"id": "mcpjam", "env": None, "markers": [("h", ".mcpjam")], "tier": 3, "flags": ()},
     {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 1, "flags": ()},
-    {"id": "moxby", "env": None, "markers": [("h", ".moxby")], "tier": 3, "flags": ()},
     # xum: the vendor (Coder) renamed cmux -> mux -> xum (shux pending);
     # the npm "mux" package is a forwarding shim. xum auto-migrates
     # ~/.mux to ~/.xum on startup - legacy marker kept as secondary
@@ -173,8 +165,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 1, "flags": ()},
     {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 1, "flags": ()},
     {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 1, "flags": ()},
-    {"id": "terramind", "env": None, "markers": [("h", ".terramind")], "tier": 3, "flags": ()},
-    {"id": "tinycloud", "env": None, "markers": [("h", ".tinycloud")], "tier": 3, "flags": ()},
     {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 1, "flags": ()},
     {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 1, "flags": ()},
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
@@ -184,7 +174,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "neovate", "env": None, "markers": [("h", ".neovate")], "tier": 3, "flags": ()},
     {"id": "pochi", "env": None, "markers": [("h", ".pochi")], "tier": 3, "flags": ()},
     {"id": "promptscript", "env": None, "markers": [("c", ".promptscript"), ("c", "promptscript.yaml")], "tier": 3, "flags": ("cwd",)},
-    {"id": "adal", "env": None, "markers": [("h", ".adal")], "tier": 3, "flags": ()},
     {"id": "universal", "env": None, "markers": [], "tier": 3, "flags": ("never",)},
 ]
 
