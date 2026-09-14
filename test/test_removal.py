@@ -139,7 +139,8 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \
                   "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
                   "xum,hermes-agent,aider-desk,forgecode,command-code," \
-                  "qoder-cn,codewhale,jcode,codebuff,kimchi,pochi"
+                   "qoder-cn,codewhale,jcode,codebuff,kimchi,pochi," \
+                   "reasonix"
     assert agents_list in agents
 
 
@@ -847,3 +848,28 @@ def test_pochi_user_remove_round_trip(run, env_for, fake_home,
               "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()
+
+
+# Phase 8 batch 5 (reasonix): --remove round-trip cleans the platform
+# home REASONIX.md inline block AND the other platform variant when a
+# marked file exists there (removal parity covers BOTH homes)
+def test_reasonix_user_remove_round_trip(run, env_for, fake_home,
+                                         src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "reasonix", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    if os.name == "nt":
+        p = Path(env["APPDATA"]) / "reasonix" / "REASONIX.md"
+        other = fake_home / ".reasonix" / "REASONIX.md"
+    else:
+        p = fake_home / ".reasonix" / "REASONIX.md"
+        other = Path(env["APPDATA"]) / "reasonix" / "REASONIX.md"
+    assert p.is_file()
+    other.parent.mkdir(parents=True, exist_ok=True)
+    other.write_bytes(p.read_bytes())
+    r2 = run(["--remove", "--agent", "reasonix", "--scope", "user",
+              "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()
+    assert not other.exists()

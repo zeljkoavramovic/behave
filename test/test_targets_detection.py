@@ -465,3 +465,23 @@ def test_pochi_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "pochi" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 5 (reasonix): the ~/.reasonix marker detects reasonix
+# (Unix home; REASONIX_HOME overrides the whole dir per the env field)
+def test_reasonix_detection(run, env_for, fake_home):
+    (fake_home / ".reasonix").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "reasonix" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 5 (reasonix): the %APPDATA%\reasonix marker detects
+# reasonix (Windows home - devin/goose APPDATA marker precedent, the
+# batch-5 Windows marker fix)
+def test_reasonix_appdata_marker_detected(run, env_for, fake_home):
+    env = env_for(fake_home)
+    (Path(env["APPDATA"]) / "reasonix").mkdir(parents=True)
+    r = run(["--list"], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "reasonix" in detected_ids(r.stdout)

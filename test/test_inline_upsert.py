@@ -1571,3 +1571,62 @@ def test_pochi_project_shared_agents_md(run, env_for, fake_home,
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
     assert not (proj / "README.pochi.md").exists()
+
+
+def _reasonix_user_target(env, fake_home):
+    # install target mirrors reasonix_home(): %APPDATA%\reasonix on
+    # Windows, ~/.reasonix elsewhere (devin platform-split precedent)
+    if os.name == "nt":
+        return Path(env["APPDATA"]) / "reasonix" / "REASONIX.md"
+    return fake_home / ".reasonix" / "REASONIX.md"
+
+
+# Phase 8 batch 5 (reasonix): user-scope inline block at the top of
+# the platform home REASONIX.md (the canonical ScopeUser rules file,
+# loaded unconditionally at every boot)
+def test_reasonix_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "reasonix", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = _reasonix_user_target(env, fake_home).read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (reasonix): a pre-existing REASONIX.md keeps its
+# content below the newly prepended block
+def test_reasonix_user_inline_preserves_existing(run, env_for,
+                                                 fake_home, src_file):
+    env = env_for(fake_home)
+    target = _reasonix_user_target(env, fake_home)
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "reasonix", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (reasonix): project scope rides the shared ./AGENTS.md
+# family block (REASONIX.md/AGENTS.md/CLAUDE.md git-root->cwd chain,
+# all matches load)
+def test_reasonix_project_shared_agents_md(run, env_for, fake_home,
+                                           proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "reasonix", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "reasonix" in served
+    assert "codex" in served  # the shared block, not a reasonix-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

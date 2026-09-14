@@ -166,7 +166,12 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 1, "flags": ()},
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
     {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
-    {"id": "reasonix", "env": None, "markers": [("h", ".reasonix")], "tier": 3, "flags": ()},
+    # reasonix: home = REASONIX_HOME env (detection override only) ||
+    # REASONIX_STATE_HOME || ~/.reasonix (Unix, literal homedir) /
+    # %APPDATA%\reasonix (Windows) - the APPDATA marker fixes Windows
+    # detection (devin/goose "a" marker precedent); install uses the
+    # plain platform path, never the env (qwen-code precedent).
+    {"id": "reasonix", "env": "REASONIX_HOME", "markers": [("a", "reasonix"), ("h", ".reasonix")], "tier": 1, "flags": ()},
     {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 1, "flags": ()},
     {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 1, "flags": ()},
     {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 1, "flags": ()},
@@ -216,6 +221,7 @@ TIER1_ORDER = [
     "codebuff",
     "kimchi",
     "pochi",
+    "reasonix",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -228,7 +234,8 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
               "aider-desk", "forgecode", "command-code", "qoder-cn",
-              "codewhale", "jcode", "codebuff", "kimchi", "pochi"]
+              "codewhale", "jcode", "codebuff", "kimchi", "pochi",
+              "reasonix"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -280,6 +287,7 @@ DISPLAY = {
     "codebuff": "Codebuff",
     "kimchi": "Kimchi",
     "pochi": "Pochi",
+    "reasonix": "Reasonix",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -420,6 +428,19 @@ def goose_config_dir():
         appd = appdata_base() or home_base() / "AppData" / "Roaming"
         return appd / "Block" / "goose"
     return xdg_base() / "goose"
+
+
+def reasonix_home():
+    """Reasonix home dir: %APPDATA%/reasonix on Windows, ~/.reasonix
+    elsewhere (paths.go L47-67/L565-570: REASONIX_HOME ||
+    REASONIX_STATE_HOME || the platform default - literal os.UserHomeDir
+    on Unix, XDG legacy-read-only; AppData\\Roaming on Windows).
+    REASONIX_HOME overrides detection only; install uses this plain
+    platform path (qwen-code precedent, devin platform-split)."""
+    if os.name == "nt":
+        appd = appdata_base() or home_base() / "AppData" / "Roaming"
+        return appd / "reasonix"
+    return home_base() / ".reasonix"
 
 
 def zed_dirs():
@@ -1350,6 +1371,27 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["pochi"],
                     home_base() / ".pochi" / "README.pochi.md", "inline"))
+            elif a == "reasonix":
+                # Reasonix (DeepSeek; esengine/DeepSeek-Reasonix):
+                # <home>/REASONIX.md is the ScopeUser rules file,
+                # loaded unconditionally at every boot into the
+                # cache-stable system prefix (resolver.go L24/L121-132,
+                # boot.go L650-657); REASONIX.md is canonical over the
+                # also-accepted AGENTS.md/CLAUDE.md in the same dir -
+                # the agent's own DocPath prefers an existing
+                # REASONIX.md, so the block absorbs later agent
+                # appends. Home: %APPDATA%\reasonix on Windows,
+                # ~/.reasonix elsewhere (devin platform-split
+                # precedent); REASONIX_HOME/REASONIX_STATE_HOME
+                # overrides exist but the plain path is used
+                # (qwen-code precedent); edits apply next session
+                # (cache-stable). Project scope rides the shared
+                # ./AGENTS.md family block (REASONIX.md/AGENTS.md/
+                # CLAUDE.md + .local.md variants, git-root->cwd chain,
+                # ALL matches load).
+                targets.append(_mk_target(
+                    ["reasonix"], reasonix_home() / "REASONIX.md",
+                    "inline"))
         return targets, notes
 
     # project scope
@@ -1625,6 +1667,15 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
             "inline", ["kimchi"])
         add(home_base() / ".pochi" / "README.pochi.md", "inline",
             ["pochi"])
+        add(home_base() / ".reasonix" / "REASONIX.md", "inline",
+            ["reasonix"])
+        # parity for BOTH platform homes (Windows APPDATA + Unix
+        # dotdir) so a platform switch or a stray marked file is
+        # always cleaned - candidates only fire on existing files
+        appd_rx = appdata_base()
+        if appd_rx is not None:
+            add(appd_rx / "reasonix" / "REASONIX.md", "inline",
+                ["reasonix"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
