@@ -1519,3 +1519,55 @@ def test_kimchi_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (pochi): user-scope inline block at the top of
+# ~/.pochi/README.pochi.md (the single fixed GlobalRules file,
+# default-on every session; non-AGENTS.md filename, hermes-agent
+# SOUL.md precedent)
+def test_pochi_user_inline(run, env_for, fake_home, src_file):
+    r = run(["--agent", "pochi", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".pochi" / "README.pochi.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (pochi): a pre-existing README.pochi.md keeps its
+# content below the newly prepended block
+def test_pochi_user_inline_preserves_existing(run, env_for, fake_home,
+                                              src_file):
+    target = fake_home / ".pochi" / "README.pochi.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "pochi", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 5 (pochi): project scope rides the shared ./AGENTS.md
+# family block (BOTH README.pochi.md and AGENTS.md at cwd load; a
+# project README.pochi.md is never written - junie .junie/AGENTS.md
+# precedent)
+def test_pochi_project_shared_agents_md(run, env_for, fake_home,
+                                        proj, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "pochi", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "pochi" in served
+    assert "codex" in served  # the shared block, not a pochi-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+    assert not (proj / "README.pochi.md").exists()

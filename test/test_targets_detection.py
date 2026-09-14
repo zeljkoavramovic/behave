@@ -456,3 +456,12 @@ def test_kimchi_detection(run, env_for, fake_home):
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     assert "kimchi" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 5 (pochi): the ~/.pochi marker detects pochi
+# (user-global rules live in README.pochi.md inside it)
+def test_pochi_detection(run, env_for, fake_home):
+    (fake_home / ".pochi").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "pochi" in detected_ids(r.stdout)

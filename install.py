@@ -177,7 +177,12 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
     {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ()},
     {"id": "neovate", "env": None, "markers": [("h", ".neovate")], "tier": 3, "flags": ()},
-    {"id": "pochi", "env": None, "markers": [("h", ".pochi")], "tier": 3, "flags": ()},
+    # pochi: user-global rules = ~/.pochi/README.pochi.md ONLY (the
+    # single fixed GlobalRules path, default-on every session;
+    # AGENTS.md is NOT loaded at user level); at project level BOTH
+    # README.pochi.md and AGENTS.md at cwd load - install writes only
+    # the family AGENTS.md, never a project README.pochi.md.
+    {"id": "pochi", "env": None, "markers": [("h", ".pochi")], "tier": 1, "flags": ()},
     {"id": "promptscript", "env": None, "markers": [("c", ".promptscript"), ("c", "promptscript.yaml")], "tier": 3, "flags": ("cwd",)},
     {"id": "universal", "env": None, "markers": [], "tier": 3, "flags": ("never",)},
 ]
@@ -210,6 +215,7 @@ TIER1_ORDER = [
     "jcode",
     "codebuff",
     "kimchi",
+    "pochi",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -222,7 +228,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "qoder", "grok", "mistral-vibe", "rovodev", "bob",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
               "aider-desk", "forgecode", "command-code", "qoder-cn",
-              "codewhale", "jcode", "codebuff", "kimchi"]
+              "codewhale", "jcode", "codebuff", "kimchi", "pochi"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -273,6 +279,7 @@ DISPLAY = {
     "jcode": "jcode",
     "codebuff": "Codebuff",
     "kimchi": "Kimchi",
+    "pochi": "Pochi",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1329,6 +1336,20 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                     ["kimchi"],
                     home_base() / ".config" / "kimchi" / "harness" /
                     "AGENTS.md", "inline"))
+            elif a == "pochi":
+                # Pochi (TabbyML): ~/.pochi/README.pochi.md is the
+                # single fixed GlobalRules path, default-on every
+                # session, inline-merged, no truncation
+                # (custom-rules.ts L14-16; hermes-agent precedent of
+                # a non-AGENTS.md user file). AGENTS.md is NOT loaded
+                # at user level. Windows: %USERPROFILE%\.pochi.
+                # Project scope rides the shared ./AGENTS.md family
+                # block (BOTH README.pochi.md and AGENTS.md at cwd
+                # load; a project README.pochi.md is never written -
+                # junie .junie/AGENTS.md precedent).
+                targets.append(_mk_target(
+                    ["pochi"],
+                    home_base() / ".pochi" / "README.pochi.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1602,6 +1623,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(home_base() / ".AGENTS.md", "inline", ["codebuff"])
         add(home_base() / ".config" / "kimchi" / "harness" / "AGENTS.md",
             "inline", ["kimchi"])
+        add(home_base() / ".pochi" / "README.pochi.md", "inline",
+            ["pochi"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
