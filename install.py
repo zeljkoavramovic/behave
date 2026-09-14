@@ -112,6 +112,11 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 1, "flags": ()},
     {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
     {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
+    # deepseek-harness: home = $DSH_HOME || ~/.dsh (home-paths
+    # DSH_HOME_DIR_NAME; homedir()/.dsh everywhere, no APPDATA variant);
+    # DSH_HOME is registered as a detection override only - install
+    # uses the plain path (reasonix/qwen-code precedent).
+    {"id": "deepseek-harness", "env": "DSH_HOME", "markers": [("h", ".dsh")], "tier": 1, "flags": ()},
     {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
     {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
     # forgecode: FORGE_CONFIG override exists but detection/install use
@@ -211,6 +216,7 @@ TIER1_ORDER = [
     "kimchi",
     "pochi",
     "reasonix",
+    "deepseek-harness",
 ]
 TIER1_SET = set(TIER1_ORDER)
 # Every family member reads project-root AGENTS.md by default; project
@@ -224,7 +230,7 @@ FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
               "cortex", "antigravity-cli", "xum", "hermes-agent",
               "aider-desk", "forgecode", "command-code", "qoder-cn",
               "codewhale", "jcode", "codebuff", "kimchi", "pochi",
-              "reasonix"]
+              "reasonix", "deepseek-harness"]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -277,6 +283,7 @@ DISPLAY = {
     "kimchi": "Kimchi",
     "pochi": "Pochi",
     "reasonix": "Reasonix",
+    "deepseek-harness": "DeepSeek Harness",
 }
 # Drop-file frontmatter per agent (INSTALLER-PLAN section 4.2).
 DROP_FRONTMATTER = {
@@ -1344,6 +1351,23 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                 targets.append(_mk_target(
                     ["reasonix"], reasonix_home() / "REASONIX.md",
                     "inline"))
+            elif a == "deepseek-harness":
+                # DeepSeek Harness (DeepSeek AI; CLI dsh): ~/.dsh/AGENTS.md
+                # is the fixed user-global instruction file, loaded as
+                # baseline before the first request by the
+                # dsh-agent-instructions plugin - "dsh-base enables this
+                # behavior by default" (package README; config.ts
+                # dshHome "defaults to $DSH_HOME or ~/.dsh"). Byte
+                # budget trims the broadest scope first, so the block
+                # stays small (codewhale caveat precedent). DSH_HOME
+                # override exists but the plain path is used
+                # (qwen-code/reasonix precedent). Project scope rides
+                # the shared ./AGENTS.md family block (AGENTS.md +
+                # CLAUDE.md per dir + .local overlays, cwd->git-root
+                # walk, every existing file loads).
+                targets.append(_mk_target(
+                    ["deepseek-harness"],
+                    home_base() / ".dsh" / "AGENTS.md", "inline"))
         return targets, notes
 
     # project scope
@@ -1628,6 +1652,8 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         if appd_rx is not None:
             add(appd_rx / "reasonix" / "REASONIX.md", "inline",
                 ["reasonix"])
+        add(home_base() / ".dsh" / "AGENTS.md", "inline",
+            ["deepseek-harness"])
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()

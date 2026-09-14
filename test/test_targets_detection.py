@@ -473,3 +473,25 @@ def test_reasonix_appdata_marker_detected(run, env_for, fake_home):
     r = run(["--list"], env=env)
     assert r.returncode == 0, r.stdout + r.stderr
     assert "reasonix" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 6 (deepseek-harness): the ~/.dsh marker detects
+# deepseek-harness (DSH home; sessions/credentials live under it)
+def test_deepseek_harness_detection(run, env_for, fake_home):
+    (fake_home / ".dsh").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "deepseek-harness" in detected_ids(r.stdout)
+
+
+# Phase 8 batch 6 (deepseek-harness): DSH_HOME relocates the whole
+# home per the registry env field (detection override only)
+def test_deepseek_harness_dsh_home_env_detected(run, env_for, fake_home,
+                                                tmp_path):
+    custom = tmp_path / "dshhome"
+    (custom / ".dsh").mkdir(parents=True)
+    env = env_for(fake_home)
+    env["DSH_HOME"] = str(custom)
+    r = run(["--list"], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "deepseek-harness" in detected_ids(r.stdout)

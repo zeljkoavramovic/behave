@@ -140,7 +140,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
                   "grok,mistral-vibe,rovodev,bob,cortex,antigravity-cli," \
                   "xum,hermes-agent,aider-desk,forgecode,command-code," \
                    "qoder-cn,codewhale,jcode,codebuff,kimchi,pochi," \
-                   "reasonix"
+                   "reasonix,deepseek-harness"
     assert agents_list in agents
 
 
@@ -873,3 +873,19 @@ def test_reasonix_user_remove_round_trip(run, env_for, fake_home,
     assert r2.returncode == 0, r2.stdout + r2.stderr
     assert not p.exists()
     assert not other.exists()
+
+
+# Phase 8 batch 6 (deepseek-harness): --remove round-trip cleans the
+# ~/.dsh/AGENTS.md inline block
+def test_deepseek_harness_user_remove_round_trip(run, env_for, fake_home,
+                                                 src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "deepseek-harness", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    p = fake_home / ".dsh" / "AGENTS.md"
+    assert p.is_file()
+    r2 = run(["--remove", "--agent", "deepseek-harness", "--scope",
+              "user", "--yes"], env=env)
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    assert not p.exists()

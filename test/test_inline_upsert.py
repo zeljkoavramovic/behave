@@ -1630,3 +1630,55 @@ def test_reasonix_project_shared_agents_md(run, env_for, fake_home,
     data = (proj / "AGENTS.md").read_bytes()
     assert data.startswith(B)
     assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 6 (deepseek-harness): user-scope inline block at the
+# top of ~/.dsh/AGENTS.md (the fixed user-global instruction file,
+# loaded as baseline before the first request)
+def test_deepseek_harness_user_inline(run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "deepseek-harness", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = (fake_home / ".dsh" / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert b"# RULES\nrules body line\n" in data
+    assert data.endswith(E)
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 6 (deepseek-harness): a pre-existing ~/.dsh/AGENTS.md
+# keeps its content below the newly prepended block
+def test_deepseek_harness_user_inline_preserves_existing(
+        run, env_for, fake_home, src_file):
+    env = env_for(fake_home)
+    target = fake_home / ".dsh" / "AGENTS.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"MY NOTES\n")
+    r = run(["--agent", "deepseek-harness", "--scope", "user", "--yes",
+             "--source", str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    data = target.read_bytes()
+    assert data.startswith(B)
+    assert b"MY NOTES" in data
+    assert data.count(b"<!-- BEGIN behave ") == 1
+
+
+# Phase 8 batch 6 (deepseek-harness): project scope rides the shared
+# ./AGENTS.md family block (AGENTS.md + CLAUDE.md per dir, cwd->git-root
+# walk, every existing file loads)
+def test_deepseek_harness_project_shared_agents_md(run, env_for,
+                                                   fake_home, proj,
+                                                   src_file):
+    env = env_for(fake_home)
+    r = run(["--agent", "deepseek-harness", "--scope", "project",
+             "--project-dir", str(proj), "--yes", "--json", "--source",
+             str(src_file)], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    payload = json.loads(r.stdout)
+    served = payload["targets"][0]["agent"].split(",")
+    assert "deepseek-harness" in served
+    assert "codex" in served  # the shared block, not an agent-only one
+    data = (proj / "AGENTS.md").read_bytes()
+    assert data.startswith(B)
+    assert data.count(b"<!-- BEGIN behave ") == 1

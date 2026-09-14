@@ -1298,3 +1298,16 @@ def test_reasonix_list_install_support(run, env_for, fake_home):
              "reasonix"]
     assert lines, r.stdout
     assert "(no install support)" not in lines[0]
+
+
+# Phase 8 batch 6 (deepseek-harness): promoted agent - --list shows
+# deepseek-harness detected without the "(no install support)" note
+def test_deepseek_harness_list_install_support(run, env_for, fake_home):
+    (fake_home / ".dsh").mkdir()
+    r = run(["--list"], env=env_for(fake_home))
+    assert r.returncode == 0, r.stdout + r.stderr
+    lines = [ln for ln in r.stdout.splitlines()
+             if ln.strip().split() and ln.strip().split()[0] ==
+             "deepseek-harness"]
+    assert lines, r.stdout
+    assert "(no install support)" not in lines[0]
