@@ -1862,8 +1862,10 @@ def cmd_list(args):
             note = "  (no install support)"
         paths = ", ".join(str(p) for p in d["paths"])
         print("  %-16s %s%s" % (d["id"], paths, note))
-    print("All known ids (%d):" % len(AGENTS))
-    print("  " + ", ".join(ALL_IDS))
+    det_ids = set(d["id"] for d in det)
+    extra = [a for a in ALL_IDS if a not in det_ids]
+    print("Additional supported agents (%d):" % len(extra))
+    print("  " + (", ".join(extra) if extra else "(none)"))
     return 0
 
 
@@ -2364,6 +2366,27 @@ def _confirm(reader, assume_yes, prompt="Proceed? [y/N] (q quits) "):
     if assume_yes:
         print("%sy (--yes)" % prompt)
         return True
+    if reader.raw_keys():
+        # owner 2026-09-14: y/n/q are non-numbered answers, so they act
+        # on the keypress like every widget key (no ENTER); ENTER takes
+        # the [y/N] default (no).  The line grammar below stays for
+        # pipe/--ascii and scripted stdin (raw_keys() False), where a
+        # typed "y\n" is the only way to answer.
+        print(prompt, end="")
+        sys.stdout.flush()
+        while True:
+            k = reader.read_key()
+            if k == "interrupt":
+                raise KeyboardInterrupt
+            if isinstance(k, str) and len(k) == 1 and k.lower() in "ynq":
+                print(k)
+                sys.stdout.flush()
+                if k.lower() == "q":
+                    raise QuitTUI()
+                return k.lower() == "y"
+            if k == "enter":
+                print()
+                return False
     while True:
         ans = _inp(reader, prompt).strip().lower()
         if ans in ("y", "yes"):
@@ -2588,7 +2611,7 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
         else:
             lines.extend(item)
     if footer:
-        lines.append(footer)
+        lines.extend(footer if isinstance(footer, list) else [footer])
     tail = status or ("typed: " + buf if buf else "")
     if tail:
         lines.append("  " + tail)
@@ -2596,14 +2619,21 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
 
 
 def _arrow_menu(reader, title, rows, multi=False, checked=(),
-                footer: Union[str, Callable[[], str]] = "",
-                on_text=None, empty_msg=None):
+                footer: Union[str, List[str],
+                              Callable[[], Union[str, List[str]]]] = "",
+                on_text=None, on_key=None, empty_msg=None):
     """The rung-2 menu widget: same items as the numbered prompt, plus a
     cursor.  Up/Down move, Space toggles [x] (multi), Enter accepts,
     Backspace edits, printable keys build a typed buffer submitted to
     on_text on Enter (the prompt's EXISTING answer grammar - numbered
     input is never removed), Esc surfaces to the caller, which walks
-    BACK to the previous menu.  All keys
+    BACK to the previous menu.  on_key, when given, is offered every
+    printable single char FIRST; returning True consumes it as an
+    immediate command - acted on the keypress like Esc/Space/Enter,
+    never buffered (the agent picker's S/L/Q, the letter answers of
+    the single-choice menus); returning ("done", value) ends the menu
+    with that value at once.  Only numbered answers stay
+    type-then-Enter.  All keys
     come from reader.read_key(): the StdinReader thread stays the single
     stdin consumer (5.2.2 - see its docstring).
 
@@ -2611,7 +2641,8 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     checked bool list (multi), or on_text's value for a typed buffer;
     or ("esc", None).  footer may be a zero-arg callable - it is
     evaluated on every redraw so a menu whose state changes mid-flight
-    (the agent picker's s-toggle) can reword its own hint."""
+    (the agent picker's s-toggle) can reword its own hint; a callable
+    may return a list of lines to render a hint block below the rows."""
     vt = _vt_ok()
     pos = 0
     # multi: keep the CALLER's list object, not a copy - the agent
@@ -2661,6 +2692,21 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
                 status = ""
             # single-choice answers never contain a space; drop it
         elif isinstance(key, str) and len(key) == 1 and key.isprintable():
+            if on_key is not None:
+                res = on_key(key)
+                if res:
+                    # immediate command consumed (S/L/Q in the agent
+                    # picker, letter answers elsewhere): acted on the
+                    # keypress like Esc/Space/Enter; it may have
+                    # rewritten the rows (L-expansion), so full redraw
+                    # and any partial buffer is dropped.  ("done",
+                    # value) ends the menu with that answer at once.
+                    buf = ""
+                    status = ""
+                    if isinstance(res, tuple):
+                        return res
+                    prev = 0
+                    continue
             buf = buf + key
             status = ""
         # every other event (left/right/home/end/...) is a no-op here
@@ -2682,7 +2728,18 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
     key - one answer grammar, two input surfaces, no second code path
     to drift.  Before this mapping existed the raw index leaked out
     (arrow-selecting "(u)ser" handed the caller the integer 0, which
-    never equals "user", so scope routing always fell to project)."""
+    never equals "user", so scope routing always fell to project).
+    Letter answers act on the keypress (owner 2026-09-14 - the ESC/
+    ENTER class of keys): u/p/q, c/a/g/j/q fire at once; digits stay
+    buffered and keep needing ENTER (the variant menu)."""
+    def on_key(ch):
+        if not ch.isalpha():
+            return False
+        value = parse_text(ch.lower())
+        if value is None:
+            return False
+        return ("done", value)
+
     def on_text(buf):
         value = parse_text(buf)
         if value is None:
@@ -2691,7 +2748,7 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
         return value
 
     kind, value = _arrow_menu(reader, title, rows, footer=footer,
-                              on_text=on_text)
+                              on_text=on_text, on_key=on_key)
     if kind == "esc":
         return None
     if isinstance(value, int):
@@ -2763,17 +2820,20 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
     the rows ARE the scan report (position, display name, detected
     path or "-"), one list instead of a pre-printed scan dump plus a
     second display-name menu.  The default view is the detected
-    agents only; typing l expands the SAME menu in place to every
+    agents only; pressing L expands the SAME menu in place to every
     supported agent.  visible is the caller's list and is mutated in
     place by that expansion (the in-place protocol below explains
     why).  Enter with an empty buffer submits the checked rows;
-    typed buffers go through the same _parse_selection grammar as the
-    numbered prompt; s toggles select all / select none of the SHOWN
-    rows only - it
+    S, L, Q act on the keypress itself (owner 2026-09-14 - the ESC/
+    SPACE/ENTER class of keys, via _arrow_menu's on_key hook): S
+    toggles select all / select none of the SHOWN rows only - it
     can never check (and install into) an agent that was not
-    detected; l first expands the view when every supported agent is
-    really wanted.  Returns None when the user pressed Esc - the
-    caller walks back to the previous menu."""
+    shown; L first expands the view when every supported agent is
+    really wanted; Q quits.  Only the numbered answers (3, 4-7,
+    2,5) stay type-then-ENTER through _parse_selection - with S/L/Q
+    intercepted, a typed buffer can only ever hold numeric grammar.
+    Returns None when the user pressed Esc - the caller walks back
+    to the previous menu."""
     pre = set(prechecked_ids)
     rows = [_agent_menu_row(i, a, det_map)
             for i, a in enumerate(visible, 1)]
@@ -2791,50 +2851,55 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         checked[:] = [a in pre for a in visible]
 
     def footer():
-        # s = select all / select none: the hint names what 's' would do
-        # NEXT, so it flips with the checkbox state instead of promising
-        # a fixed "all" that stopped being true two keypresses ago.
+        # the hint block lives BELOW the rows (owner 2026-09-14);
+        # line one rewords S with the checkbox state so it always
+        # names what S would do NEXT
         state = "none" if checked and all(checked) else "all"
-        return "  s = select %s, l = list all, q = quit" % state
+        return ["  SPACE toggles [x], ENTER = install the checked items, "
+                "ESC = back, S = select %s," % state,
+                "  L = list all, Q = quit; numbers (3), ranges (4-7), "
+                "lists (2,5) need ENTER"]
+
+    def on_key(ch):
+        # owner 2026-09-14: S/L/Q act on the keypress itself (the ESC/
+        # SPACE/ENTER class) - never buffered; only numbered answers
+        # (3, 4-7, 2,5) stay type-then-ENTER.  Q quits, L expands the
+        # view in place, S toggles the SHOWN rows like one big Space
+        # press (S used to be 'a' + ENTER, which returned every
+        # supported agent, installing into - and leaving dirs behind
+        # for - agents that were never detected; L + S still reaches
+        # every supported agent when that is wanted).
+        ch = ch.lower()
+        if ch == "q":
+            raise QuitTUI()
+        if ch == "l":
+            expand()
+            return True
+        if ch == "s":
+            checked[:] = [not all(checked)] * len(visible)
+            return True
+        return False
 
     def on_text(buf):
-        if buf.strip().lower() in ("q", "quit"):
-            raise QuitTUI()
+        # on_key intercepts S/L/Q, so a buffer here can only ever hold
+        # the numeric grammar - ranges/lists parse exactly like the
+        # numbered prompt's ("default"/"all"/"list" are unreachable)
         res = _parse_selection(buf, len(visible))
-        if res == "list":
-            expand()
-            return _MENU_AGAIN
-        if res == "all":
-            # owner 2026-09-14: 's' used to be 'a', which returned every
-            # supported agent, installing (and leaving dirs behind for)
-            # agents that were never detected.  It now toggles the
-            # SHOWN rows like one big Space press; l + s still
-            # reaches every supported agent when that is wanted.
-            checked[:] = [not all(checked)] * len(visible)
-            return _MENU_AGAIN
-        if res == "default":
-            if pre:
-                return [a for a in tier1 if a in pre]
-            print("nothing is pre-checked (no supported agents detected); "
-                  "pick numbers or 's'")
-            return _MENU_AGAIN
         if res is None:
             print("not understood: use numbers (1), ranges (1-4), lists "
-                  "(1,3), s, l, q, or ENTER")
+                  "(1,3)")
             return _MENU_AGAIN
         return [visible[i - 1] for i in res]
 
     kind, value = _arrow_menu(
         reader,
-        ["Install into which agents?  (SPACE toggles [x]; ENTER = the "
-         "checked items;",
-         "ESC = back to the previous menu; typing also works: numbers (3), "
-         "ranges (4-7), lists (2,5); l = list all, q = quit)"],
+        [],
         rows, multi=True, checked=checked,
         footer=footer,
         on_text=on_text,
-        empty_msg="nothing is checked: SPACE toggles rows, or type 's' + "
-                  "ENTER to select all shown")
+        on_key=on_key,
+        empty_msg="nothing is checked: SPACE toggles rows, or press S to "
+                  "select all shown")
     if kind == "esc":
         return None
     if isinstance(value, list) and value and isinstance(value[0], bool):
@@ -2897,10 +2962,10 @@ def _pick_agents(reader, prechecked_ids, det_map):
 
 def _tui_user(args, reader, source):
     print()
-    print("Scanning for installed agents (%d supported, see --list)..."
-          % len(TIER1_ORDER))
     det = detect_agents()
     det_map = dict((d["id"], d) for d in det)
+    print("Detected %d agents (out of %d supported, see --list)..."
+          % (len(det), len(TIER1_ORDER)))
     # plain det_map membership is the detected test here; the agent
     # menu below IS the report.
     prechecked = set(aid for aid in TIER1_ORDER if aid in det_map)

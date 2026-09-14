@@ -429,6 +429,8 @@ def test_widget_row_keys_map_rows_to_grammar():
         "        self.keys = list(keys)\n"
         "    def read_key(self):\n"
         "        return self.keys.pop(0)\n"
+        "    def raw_keys(self):\n"
+        "        return True\n"
         "def scope_grammar(buf):\n"
         "    a = buf.strip().lower()\n"
         "    if a in ('q', 'quit'):\n"
@@ -452,6 +454,12 @@ def test_widget_row_keys_map_rows_to_grammar():
         "assert I._widget_choice(R(['x', 'enter', 'p', 'enter']), ['t'],\n"
         "                        scope_rows, '', 'bad', scope_grammar,\n"
         "                        scope_keys) == 'project'\n"
+        "try:\n"
+        "    I._widget_choice(R(['q']), ['t'], scope_rows, '', 'bad',\n"
+        "                     scope_grammar, scope_keys)\n"
+        "    raise SystemExit('scope q did not quit on the keypress')\n"
+        "except I.QuitTUI:\n"
+        "    pass\n"
         "fam_map = {'a': 'a', 'c': 'c', 'g': 'g', 'j': 'j'}\n"
         "def fam_grammar(buf):\n"
         "    a = buf.strip().lower()\n"
@@ -492,15 +500,26 @@ def test_widget_row_keys_map_rows_to_grammar():
         "det_map = {'claude-code': {'id': 'claude-code',\n"
         "                           'paths': ['/hx/.claude']}}\n"
         "visible = [a for a in tier1 if a in det_map]\n"
-        "chosen = I._pick_agents_widget(R(['l', 'enter', 'enter']), tier1,\n"
+        "chosen = I._pick_agents_widget(R(['l', 'enter']), tier1,\n"
         "                               {'claude-code'}, det_map, visible)\n"
         "assert chosen == ['claude-code']\n"
         "assert visible == tier1  # expansion mutated the shared list\n"
         "visible2 = [a for a in tier1 if a in det_map]\n"
-        "esc = I._pick_agents_widget(R(['l', 'enter', 'esc']), tier1,\n"
+        "esc = I._pick_agents_widget(R(['l', 'esc']), tier1,\n"
         "                            {'claude-code'}, det_map, visible2)\n"
         "assert esc is None\n"
         "assert visible2 == tier1  # Esc keeps the expanded view\n"
+        "# _confirm cases: raw-key mode answers on the keypress; the\n"
+        "# fake R reports raw_keys() True, so the line grammar is off\n"
+        "try:\n"
+        "    I._confirm(R(['q']), False)\n"
+        "    raise SystemExit('confirm q did not quit on the keypress')\n"
+        "except I.QuitTUI:\n"
+        "    pass\n"
+        "assert I._confirm(R(['y']), False) is True\n"
+        "assert I._confirm(R(['N']), False) is False\n"
+        "assert I._confirm(R(['enter']), False) is False\n"
+        "assert I._confirm(R(['x', 'y']), False) is True\n"
         "print('rowkeys-ok')\n"
     )
     r = subprocess.run(
@@ -517,9 +536,10 @@ def test_widget_row_keys_map_rows_to_grammar():
 
 
 # the widget's 's' toggles select all / select none of the SHOWN rows
-# (the footer hint flips with the checkbox state), never returns an
-# undetected agent on its own, and l + s still reaches every supported
-# agent; same fake reader / subprocess pattern as the row-keys test above
+# on the keypress itself (immediate - no ENTER; the footer hint flips
+# with the checkbox state), q quits on the keypress, numbers still need
+# ENTER, and l + s still reaches every supported agent; same fake
+# reader / subprocess pattern as the row-keys test above
 def test_widget_s_toggles_shown_rows_only():
     code = (
         "import install as I\n"
@@ -538,24 +558,34 @@ def test_widget_s_toggles_shown_rows_only():
         "# 1) everything pre-checked: s flips to none, s flips back to\n"
         "#    all, Space then narrows to the second row\n"
         "w1 = I._pick_agents_widget(\n"
-        "    R(['s', 'enter', 's', 'enter', 'space', 'enter']),\n"
+        "    R(['s', 's', 'space', 'enter']),\n"
         "    tier1, {'claude-code', 'codex'}, det_map, fresh())\n"
         "assert w1 == ['codex'], w1\n"
         "# 2) partial pre-check: s checks every SHOWN row - and only\n"
         "#    those (52-agent tier1 must NOT come back from 's' alone)\n"
-        "w2 = I._pick_agents_widget(R(['s', 'enter', 'enter']),\n"
+        "w2 = I._pick_agents_widget(R(['s', 'enter']),\n"
         "                           tier1, {'claude-code'}, det_map,\n"
         "                           fresh())\n"
         "assert w2 == ['claude-code', 'codex'], w2\n"
         "# 3) l expands the view first; THEN s checks every supported\n"
         "#    agent - the everywhere-install stays reachable, opt-in\n"
         "vis3 = fresh()\n"
-        "w3 = I._pick_agents_widget(R(['l', 'enter', 's', 'enter',\n"
-        "                              'enter']),\n"
+        "w3 = I._pick_agents_widget(R(['l', 's', 'enter']),\n"
         "                           tier1, {'claude-code'}, det_map,\n"
         "                           vis3)\n"
         "assert w3 == tier1, 'l + s must still select every agent'\n"
         "assert vis3 == tier1\n"
+        "# 4) q quits on the keypress - no ENTER\n"
+        "try:\n"
+        "    I._pick_agents_widget(R(['q']), tier1, set(), det_map,\n"
+        "                          fresh())\n"
+        "    raise SystemExit('q did not quit')\n"
+        "except I.QuitTUI:\n"
+        "    pass\n"
+        "# 5) numbers stay type-then-ENTER: '1' buffers, ENTER submits\n"
+        "w5 = I._pick_agents_widget(R(['1', 'enter']), tier1, set(),\n"
+        "                           det_map, fresh())\n"
+        "assert w5 == ['claude-code'], w5\n"
         "print('stoggle-ok')\n"
     )
     r = subprocess.run(
@@ -570,8 +600,8 @@ def test_widget_s_toggles_shown_rows_only():
     assert r.returncode == 0, r.stdout + r.stderr
     assert "stoggle-ok" in r.stdout
     # the footer wording flips with the checkbox state across redraw 1
-    assert "s = select all, l = list all" in r.stdout
-    assert "s = select none, l = list all" in r.stdout
+    assert "S = select all," in r.stdout
+    assert "S = select none," in r.stdout
 
 
 # P5.2: the pure key decoders (ANSI escape bytes -> key names;
@@ -939,7 +969,8 @@ def test_tui_flow_esc_wizard_pure(tmp_path):
     assert r.stdout.count("Where should the rules apply?") == 4, r.stdout
     # the round trips actually reached the family and agents menus
     assert "Which family?" in r.stdout
-    assert "Scanning for installed agents" in r.stdout
+    assert "Detected 0 agents (out of 52 supported, see --list)" \
+        in r.stdout
 
 
 # Canary round 2, the missing matrix cell: Esc at the Claude-file
@@ -984,8 +1015,10 @@ def test_tui_flow_variant_esc_back_pure(tmp_path):
     assert "variant-esc-ok" in r.stdout
     assert "Which Claude file?" in r.stdout
     # family visited twice: visit1 = render + down-redraw (enter
-    # returns without redraw), visit2 = render + typed-q redraw
-    assert r.stdout.count("Which family?") == 4, r.stdout
+    # returns without redraw), visit2 = render (the immediate q quits
+    # on the keypress - no typed-q redraw since letters stopped
+    # buffering)
+    assert r.stdout.count("Which family?") == 3, r.stdout
 
 
 # Canary round 3: the cursor row renders in reverse video on VT

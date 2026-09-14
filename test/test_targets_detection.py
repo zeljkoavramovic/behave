@@ -122,7 +122,7 @@ def detected_ids(out):
         if line.startswith("Detected agents ("):
             in_det = True
             continue
-        if line.startswith("All known ids"):
+        if line.startswith("Additional supported agents ("):
             in_det = False
             continue
         if in_det and line.startswith("  ") and line.strip():
@@ -150,9 +150,14 @@ def test_15_detection(run, env_for, fake_home, tmp_path):
     assert "deprecated" not in r.stdout
     # the known-id count must agree with the ids actually listed
     # (derived from the run's own output - never a stale literal)
-    m = re.search(r"All known ids \((\d+)\):\n\s+(.+)", r.stdout)
+    m = re.search(r"Additional supported agents \((\d+)\):\n\s+(.+)",
+                  r.stdout)
     assert m, r.stdout
     assert int(m.group(1)) == len(m.group(2).split(", "))
+    # detected ids never repeat in the additional list
+    extra_ids = set(x.strip() for x in m.group(2).split(", "))
+    assert len(extra_ids) == int(m.group(1))
+    assert not (extra_ids & ids)
 
     h2 = tmp_path / "h2"
     h2.mkdir()
