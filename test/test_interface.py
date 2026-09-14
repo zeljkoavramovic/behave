@@ -315,7 +315,7 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
     assert "SPACE toggles" not in r.stdout
-    assert "typing also works" not in r.stdout
+    assert "ESC = back" not in r.stdout
     # no ANSI escape sequences anywhere (widget redraw is the only emitter)
     assert "\x1b[" not in r.stdout
     assert "Traceback" not in combined
@@ -344,15 +344,22 @@ def test_agent_menu_detected_first_l_expands(run, env_for, fake_home,
     full = int(ranges[-1])
     assert full > 2
     assert "s = select all shown" in r.stdout
-    # full-list positions after expansion: gemini-cli is #6, undetected
-    assert "6  Gemini CLI" in r.stdout
+    # full-list position after expansion: derive gemini-cli's row
+    # number from the rendered menu itself (undetected -> "-" path),
+    # never a stale literal; the number must sit inside the prompt's
+    # own expanded [1-N] range - typing it is what installs it
+    # (next test)
+    m = re.search(r"^ +(\d+) +Gemini CLI +-", r.stdout, re.M)
+    assert m, r.stdout
+    assert 1 <= int(m.group(1)) <= full
     assert "quit; nothing written" in combined
     assert "Traceback" not in combined
 
 
 # l-expansion then a full-list number installs a NON-detected agent
 # (numbers after l refer to the on-screen full-list rows; the expanded
-# range and the "a = all N" hint must agree, N derived not pinned)
+# range and the "s = select all shown" hint must agree, N derived not
+# pinned)
 def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
                                                        fake_home, src_file):
     (fake_home / ".claude").mkdir()
@@ -406,6 +413,9 @@ def test_agent_menu_all_shown_installs_only_detected(run, env_for,
     combined = r.stdout + r.stderr
     assert r.returncode == 0, combined
     assert "s = select all shown" in r.stdout
+    # the two-line epilogue rides every successful install
+    assert "Done - restart your agents to pick up changes." in r.stdout
+    assert "python install.py --remove to uninstall." in r.stdout
     assert (fake_home / ".claude" / "rules" / "behave.md").is_file()
     assert (fake_home / ".codex" / "AGENTS.md").is_file()
     # nothing written for ANY undetected agent
@@ -602,6 +612,200 @@ def test_widget_s_toggles_shown_rows_only():
     # the footer wording flips with the checkbox state across redraw 1
     assert "S = select all," in r.stdout
     assert "S = select none," in r.stdout
+
+
+# installed-glyph in the real widget: a fake HOME plants a detection
+# marker dir for codex AND a real inline-block install for opencode;
+# the widget, fed installed_ids exactly the way _tui_user computes it
+# (scan_removal over user scope), must render the checked+installed
+# row as [X], the checked-but-fresh row as [x]; SPACE toggling still
+# works and the glyph tracks the checked state ([ ] while unchecked,
+# back to [x] when re-checked - installed state never shows on an
+# unchecked row); same fake-reader subprocess pattern as above, plus
+# the env_for HOME isolation of the numbered-prompt tests
+def test_widget_installed_marks_x_glyph(env_for, fake_home):
+    (fake_home / ".codex").mkdir()
+    oc = fake_home / ".config" / "opencode" / "AGENTS.md"
+    oc.parent.mkdir(parents=True)
+    oc.write_bytes(B + b"# RULES\nbody\n" +
+                   b"<!-- END behave -->\n")
+    code = (
+        "import install as I\n"
+        "det = I.detect_agents()\n"
+        "det_map = dict((d['id'], d) for d in det)\n"
+        "assert sorted(det_map) == ['codex', 'opencode'], det_map\n"
+        "installed_ids = set()\n"
+        "for f in I.scan_removal(None, 'user', None, None, 'behave'):\n"
+        "    installed_ids.update(f['agents'])\n"
+        "assert installed_ids == {'opencode'}, installed_ids\n"
+        "class R:\n"
+        "    def __init__(self, keys):\n"
+        "        self.keys = list(keys)\n"
+        "    def read_key(self):\n"
+        "        return self.keys.pop(0)\n"
+        "    def raw_keys(self):\n"
+        "        return True\n"
+        "tier1 = list(I.TIER1_ORDER)\n"
+        "visible = [a for a in tier1 if a in det_map]\n"
+        "w = I._pick_agents_widget(R(['space', 'space', 'enter']),\n"
+        "                           tier1, set(det_map), det_map,\n"
+        "                           visible, installed_ids)\n"
+        "assert w == ['codex', 'opencode'], w\n"
+        "assert visible == ['codex', 'opencode'], visible\n"
+        "print('installmark-ok')\n"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env=env_for(fake_home),
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "installmark-ok" in r.stdout
+    # the footer legend rides every widget draw
+    assert "[X] = already installed" in r.stdout
+    # the glyph must ride the row line (number + display name), so
+    # the footer's literal "[x]" hint can never satisfy these
+    assert re.search(r"\[X\] +\d+ +OpenCode", r.stdout), r.stdout
+    assert re.search(r"\[x\] +\d+ +Codex", r.stdout), r.stdout
+    assert re.search(r"\[ \] +\d+ +Codex", r.stdout), r.stdout
+    assert "[X]" in r.stdout
+
+
+# l-expansion rebuilds marks in place (the same exact-list protocol
+# as rows/checked): after L every supported agent is shown, the
+# installed opencode still renders [X] on its renumbered row, and
+# fresh rows render [ ] (claude-code, unchecked) / [x] (codex,
+# checked) - no crash, selection semantics untouched
+def test_widget_installed_marks_survive_l_expansion(env_for, fake_home):
+    (fake_home / ".codex").mkdir()
+    oc = fake_home / ".config" / "opencode" / "AGENTS.md"
+    oc.parent.mkdir(parents=True)
+    oc.write_bytes(B + b"# RULES\nbody\n" +
+                   b"<!-- END behave -->\n")
+    code = (
+        "import install as I\n"
+        "det = I.detect_agents()\n"
+        "det_map = dict((d['id'], d) for d in det)\n"
+        "installed_ids = set()\n"
+        "for f in I.scan_removal(None, 'user', None, None, 'behave'):\n"
+        "    installed_ids.update(f['agents'])\n"
+        "class R:\n"
+        "    def __init__(self, keys):\n"
+        "        self.keys = list(keys)\n"
+        "    def read_key(self):\n"
+        "        return self.keys.pop(0)\n"
+        "    def raw_keys(self):\n"
+        "        return True\n"
+        "tier1 = list(I.TIER1_ORDER)\n"
+        "visible = [a for a in tier1 if a in det_map]\n"
+        "w = I._pick_agents_widget(R(['l', 'enter']), tier1,\n"
+        "                           set(det_map), det_map, visible,\n"
+        "                           installed_ids)\n"
+        "assert w == ['codex', 'opencode'], w\n"
+        "assert visible == tier1  # expansion mutated the shared list\n"
+        "print('lmarks-ok')\n"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env=env_for(fake_home),
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "lmarks-ok" in r.stdout
+    assert re.search(r"\[X\] +\d+ +OpenCode", r.stdout), r.stdout
+    assert re.search(r"\[x\] +\d+ +Codex", r.stdout), r.stdout
+    assert re.search(r"\[ \] +\d+ +Claude Code", r.stdout), r.stdout
+    assert "Traceback" not in (r.stdout + r.stderr)
+
+
+# stacked redraws get ONE blank separator line: with piped stdout
+# _vt_ok() is False, so every redraw prints below the previous block
+# and must be visually separated; the FIRST draw needs no separator.
+# Two SPACE toggles = three draws = exactly two non-overwriting
+# redraws; same fake-reader subprocess pattern as the tests above
+def test_widget_redraw_blank_separator():
+    code = (
+        "import install as I\n"
+        "class R:\n"
+        "    def __init__(self, keys):\n"
+        "        self.keys = list(keys)\n"
+        "    def read_key(self):\n"
+        "        return self.keys.pop(0)\n"
+        "    def raw_keys(self):\n"
+        "        return True\n"
+        "tier1 = list(I.TIER1_ORDER)\n"
+        "det_map = {'claude-code': {'id': 'claude-code',\n"
+        "                           'paths': ['/hx/.claude']},\n"
+        "           'codex': {'id': 'codex',\n"
+        "                     'paths': ['/hx/.codex']}}\n"
+        "visible = [a for a in tier1 if a in det_map]\n"
+        "w = I._pick_agents_widget(R(['space', 'space', 'enter']),\n"
+        "                           tier1, {'claude-code', 'codex'},\n"
+        "                           det_map, visible)\n"
+        "assert w == ['claude-code', 'codex'], w\n"
+        "print('sep-ok')\n"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "sep-ok" in r.stdout
+    lines = r.stdout.split("\n")
+    # a separator is a blank line directly above the next block's
+    # first row (the "[" checkbox); one per non-overwriting redraw
+    seps = [i for i, ln in enumerate(lines)
+            if ln.strip() == "" and i + 1 < len(lines)
+            and "[" in lines[i + 1]]
+    assert len(seps) == 2, r.stdout
+    # the first block starts at the top of stdout - no separator
+    # before it (a leading blank would have shown up as a third)
+    assert lines[0].startswith("> ["), r.stdout
+
+
+# numbered fallback (piped stdin, no arrow keys): the rows have no
+# checkboxes, so an already-installed agent carries the info as a
+# text suffix instead - "(installed)" on the planted opencode row,
+# nothing on the detected-but-fresh codex row; scripted session in
+# the style of the numbered-prompt tests above
+def test_numbered_fallback_installed_suffix(run, env_for, fake_home,
+                                            src_file):
+    (fake_home / ".codex").mkdir()
+    oc = fake_home / ".config" / "opencode" / "AGENTS.md"
+    oc.parent.mkdir(parents=True)
+    oc.write_bytes(B + b"# RULES\nbody\n" +
+                   b"<!-- END behave -->\n")
+    r = run(["--interactive", "--source", str(src_file)],
+            env=env_for(fake_home), cwd=fake_home,
+            input_text="u\n1\nn\n")
+    combined = r.stdout + r.stderr
+    assert r.returncode == 0, combined
+    assert "Install into which agents? [1-2]" in r.stdout
+    assert "aborted; nothing written" in combined
+    # row-anchored: the suffix must ride the agent row line itself
+    lines = r.stdout.split("\n")
+    oc_rows = [ln for ln in lines if re.search(r"^ +2 +OpenCode ", ln)]
+    cx_rows = [ln for ln in lines if re.search(r"^ +1 +Codex ", ln)]
+    assert oc_rows, r.stdout
+    assert all("(installed)" in ln for ln in oc_rows), r.stdout
+    assert cx_rows, r.stdout
+    assert all("(installed)" not in ln for ln in cx_rows), r.stdout
+    assert "Traceback" not in combined
 
 
 # P5.2: the pure key decoders (ANSI escape bytes -> key names;
@@ -969,8 +1173,16 @@ def test_tui_flow_esc_wizard_pure(tmp_path):
     assert r.stdout.count("Where should the rules apply?") == 4, r.stdout
     # the round trips actually reached the family and agents menus
     assert "Which family?" in r.stdout
-    assert "Detected 0 agents (out of 52 supported, see --list)" \
-        in r.stdout
+    # supported-agent count is derived twice in the same output
+    # (banner + zero-detection fallback), both from len(TIER1_ORDER) -
+    # they must agree, never a stale literal (the :304 test's idiom)
+    c1 = re.search(r"Detected 0 agents \(out of (\d+) supported, "
+                   r"see --list\)", r.stdout)
+    assert c1, r.stdout
+    c2 = re.search(r"no supported agents detected; showing all (\d+)",
+                   r.stdout)
+    assert c2, r.stdout
+    assert c1.group(1) == c2.group(1), r.stdout
 
 
 # Canary round 2, the missing matrix cell: Esc at the Claude-file
@@ -1056,6 +1268,43 @@ def test_menu_block_cursor_inversion_pure():
     )
     assert r.returncode == 0, r.stdout + r.stderr
     assert "invert-ok" in r.stdout
+
+
+# installed-glyph rendering: with marks, a checked row whose agent is
+# already installed renders [X], a checked-but-fresh row [x], an
+# unchecked row always the plain [ ] (installed state never shows
+# without the check); with marks omitted the old [x]/[ ] behavior is
+# byte-identical; same pure subprocess pattern as the inversion test
+def test_menu_block_installed_marks_pure():
+    code = (
+        "import install as I\n"
+        "rows = ['a', 'b', 'c']\n"
+        "checked = [True, True, False]\n"
+        "marks = [True, False, True]\n"
+        "lns = I._menu_block(['t'], rows, 0, checked, True, '', '', '',\n"
+        "                    False, marks=marks)\n"
+        "assert '[X] a' in lns[1], lns\n"
+        "assert '[x] b' in lns[2], lns\n"
+        "assert '[ ] c' in lns[3], lns\n"
+        "old = I._menu_block(['t'], rows, 0, checked, True, '', '', '',\n"
+        "                    False)\n"
+        "assert '[x] a' in old[1] and '[x] b' in old[2], old\n"
+        "assert '[ ] c' in old[3], old\n"
+        "assert '[X]' not in ''.join(old), old\n"
+        "print('marks-ok')\n"
+    )
+    import subprocess
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "marks-ok" in r.stdout
 
 
 # Canary round 3: --ascii forces the numbered-prompt navigation -

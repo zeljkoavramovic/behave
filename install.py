@@ -1491,31 +1491,6 @@ def execute_targets(targets, source, block_id, project_dir=None):
     return results
 
 
-def restart_hints(agents):
-    lines = []
-    if "claude-code" in agents:
-        lines.append("  - Claude Code: start a new session; verify via "
-                     "/context (Memory files).")
-    fam_restart = [a for a in FAMILY_IDS if a in agents and a != "cursor"]
-    if fam_restart:
-        # one grouped line for the AGENTS.md family; cursor keeps its own
-        names = " / ".join(DISPLAY.get(a, a) for a in FAMILY_IDS
-                           if a != "cursor")
-        lines.append("  - %s: restart them (Codex rebuilds its chain "
-                     "every run)." % names)
-    if "cursor" in agents:
-        lines.append("  - Cursor: restart the app (rules apply to Agent/Chat).")
-    if "gemini-cli" in agents:
-        lines.append("  - Gemini CLI: restart the session.")
-    if "github-copilot" in agents:
-        lines.append("  - GitHub Copilot: restart the CLI / reload the "
-                     "editor window.")
-    if lines:
-        say("Done - restart your agents to pick up changes:")
-        for ln in lines:
-            say(ln)
-
-
 def stale_hint(written_paths, project_dir, block_id):
     """After any install: hint at marked blocks left in other locations."""
     findings = scan_removal(None, None, None, project_dir, block_id)
@@ -1936,15 +1911,13 @@ def cmd_install(args):
         results = execute_targets(targets, source, args.block_id, project_dir)
         written = [r for r in results if not r["error"]]
         ok_paths = set()
-        touched = []
         for t, r in zip(targets, results):
             if not r["error"]:
                 ok_paths.add(t["path"])
-                touched.extend(t["agents"])
         if written:
             stale_hint(ok_paths, project_dir, args.block_id)
-            restart_hints(touched)
-            say("Re-run to update; python install.py --remove to uninstall.")
+            say("Done - restart your agents to pick up changes.")
+            say("python install.py --remove to uninstall.")
 
     if args.json:
         print(json.dumps({
@@ -2565,22 +2538,31 @@ _BACK = object()  # wizard back-navigation: Esc walks to the previous
                  # support - never a mid-work mode switch
 
 
-def _menu_write(vt, prev_count, lines):
-    """(Re)draw the widget block - the only place ANSI escapes appear."""
+def _menu_write(vt, prev_count, lines, sep=False):
+    """(Re)draw the widget block - the only place ANSI escapes appear.
+    sep prints one blank line first when this draw does NOT overwrite
+    the previous one (non-VT fallback redraws; VT full redraws after
+    an expansion or message reset prev_count) so stacked blocks stay
+    visually apart."""
     out = sys.stdout
     if vt and prev_count:
         out.write("\x1b[%dA\r" % prev_count)
+    elif sep:
+        out.write("\n")
     for ln in lines:
         out.write(ln + ("\x1b[K\n" if vt else "\n"))
     out.flush()
 
 
 def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
-                vt=False):
+                vt=False, marks=None):
     """The widget's rendered lines: title, item rows with a '>' cursor
     (and [x]/[ ] marks in multi mode), footer, and one status/typed
     line - raw mode has no terminal echo, so the typed buffer must be
-    visible here."""
+    visible here.  marks, when given, is a bool list parallel to rows
+    (multi only): a checked row whose agent is already installed
+    renders [X] instead of [x]; an unchecked row always renders the
+    plain [ ] - installed state never shows without the check."""
     # (owner, canary round 3 follow-up) Precompute items and width
     # so every VT-cursor bar pads one space past the widest row line
     # in this menu
@@ -2590,8 +2572,11 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
         parts = row.split("\n")
         lead = ">" if i == pos else " "
         if multi:
-            item = ["%s [%c] %s" % (lead, "x" if checked[i] else " ",
-                                   parts[0])]
+            if checked[i]:
+                box = "X" if marks is not None and marks[i] else "x"
+            else:
+                box = " "
+            item = ["%s [%c] %s" % (lead, box, parts[0])]
         else:
             item = ["%s %s" % (lead, parts[0])]
         for extra in parts[1:]:
@@ -2621,7 +2606,7 @@ def _menu_block(title, rows, pos, checked, multi, footer, buf, status,
 def _arrow_menu(reader, title, rows, multi=False, checked=(),
                 footer: Union[str, List[str],
                               Callable[[], Union[str, List[str]]]] = "",
-                on_text=None, on_key=None, empty_msg=None):
+                on_text=None, on_key=None, empty_msg=None, marks=None):
     """The rung-2 menu widget: same items as the numbered prompt, plus a
     cursor.  Up/Down move, Space toggles [x] (multi), Enter accepts,
     Backspace edits, printable keys build a typed buffer submitted to
@@ -2642,7 +2627,10 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     or ("esc", None).  footer may be a zero-arg callable - it is
     evaluated on every redraw so a menu whose state changes mid-flight
     (the agent picker's s-toggle) can reword its own hint; a callable
-    may return a list of lines to render a hint block below the rows."""
+    may return a list of lines to render a hint block below the rows.
+    marks (multi only) is passed through to _menu_block untouched -
+    like checked it must stay the caller's exact list object, because
+    the agent picker's l-expansion rewrites it in place."""
     vt = _vt_ok()
     pos = 0
     # multi: keep the CALLER's list object, not a copy - the agent
@@ -2652,11 +2640,17 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     buf = ""
     status = ""
     prev = 0
+    drawn = False
     while True:
         block = _menu_block(title, rows, pos, checked, multi,
                             footer() if callable(footer) else footer,
-                            buf, status, vt)
-        _menu_write(vt, prev, block)
+                            buf, status, vt, marks=marks)
+        # a redraw that overwrites (VT cursor-up) needs no separator;
+        # anything printed below the previous block gets one blank
+        # line so the blocks do not touch (non-VT fallback, VT full
+        # redraws after expansion/message)
+        _menu_write(vt, prev, block, sep=drawn and not (vt and prev))
+        drawn = True
         prev = len(block)
         key = reader.read_key()
         if key == "up":
@@ -2798,24 +2792,29 @@ def _preview_targets(targets, project_dir):
 def _summary_after_install(results, targets, project_dir, block_id,
                            source_label):
     ok_paths = set()
-    touched = []
     for t, r in zip(targets, results):
         if not r["error"]:
             ok_paths.add(t["path"])
-            touched.extend(t["agents"])
     if any(not r["error"] for r in results):
         stale_hint(ok_paths, project_dir, block_id)
-        restart_hints(touched)
-        say("Re-run to update; python install.py --remove to uninstall.")
+        say("Done - restart your agents to pick up changes.")
+        say("python install.py --remove to uninstall.")
 
 
-def _agent_menu_row(pos, aid, det_map):
+def _agent_menu_row(pos, aid, det_map, installed=False):
     d = det_map.get(aid)
     path = str(d["paths"][0]) if d else "-"
-    return "%2d  %-17s %s" % (pos, DISPLAY[aid], path)
+    row = "%2d  %-17s %s" % (pos, DISPLAY[aid], path)
+    # installed state has two renderings: the widget's [X] glyph on
+    # the checkbox (this flag stays False there) and this text suffix
+    # for the numbered fallback, whose rows have no checkboxes
+    if installed:
+        row += "  (installed)"
+    return row
 
 
-def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
+def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible,
+                        installed_ids=None):
     """Multi-select widget for the agent picker - and the menu itself:
     the rows ARE the scan report (position, display name, detected
     path or "-"), one list instead of a pre-printed scan dump plus a
@@ -2832,12 +2831,18 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
     really wanted; Q quits.  Only the numbered answers (3, 4-7,
     2,5) stay type-then-ENTER through _parse_selection - with S/L/Q
     intercepted, a typed buffer can only ever hold numeric grammar.
-    Returns None when the user pressed Esc - the caller walks back
-    to the previous menu."""
+    installed_ids is the set of agents that already carry our marker
+    (user scope): a checked row for such an agent renders [X] instead
+    of [x], so a re-run shows what is already in place; unchecked
+    rows never show install state.  Returns None when the user
+    pressed Esc - the caller walks back to the previous menu."""
+    if installed_ids is None:
+        installed_ids = set()
     pre = set(prechecked_ids)
     rows = [_agent_menu_row(i, a, det_map)
             for i, a in enumerate(visible, 1)]
     checked = [a in pre for a in visible]
+    marks = [a in installed_ids for a in visible]
 
     def expand():
         # in-place protocol: rows/checked/visible are rewritten, not
@@ -2849,16 +2854,19 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         rows[:] = [_agent_menu_row(i, a, det_map)
                    for i, a in enumerate(visible, 1)]
         checked[:] = [a in pre for a in visible]
+        marks[:] = [a in installed_ids for a in visible]
 
     def footer():
         # the hint block lives BELOW the rows (owner 2026-09-14);
         # line one rewords S with the checkbox state so it always
-        # names what S would do NEXT
+        # names what S would do NEXT; it also carries the [X] legend
+        # for the installed-glyph
         state = "none" if checked and all(checked) else "all"
-        return ["  SPACE toggles [x], ENTER = install the checked items, "
-                "ESC = back, S = select %s," % state,
-                "  L = list all, Q = quit; numbers (3), ranges (4-7), "
-                "lists (2,5) need ENTER"]
+        return ["  SPACE toggles [x] ([X] = already installed), "
+                "ENTER = install the checked items,",
+                "  ESC = back, S = select %s, L = list all, Q = quit; "
+                "Numbers (3), ranges (4-7) and lists (2,5) need ENTER"
+                % state]
 
     def on_key(ch):
         # owner 2026-09-14: S/L/Q act on the keypress itself (the ESC/
@@ -2899,7 +2907,8 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         on_text=on_text,
         on_key=on_key,
         empty_msg="nothing is checked: SPACE toggles rows, or press S to "
-                  "select all shown")
+                  "select all shown",
+        marks=marks)
     if kind == "esc":
         return None
     if isinstance(value, list) and value and isinstance(value[0], bool):
@@ -2907,7 +2916,7 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
     return value
 
 
-def _pick_agents(reader, prechecked_ids, det_map):
+def _pick_agents(reader, prechecked_ids, det_map, installed_ids=None):
     tier1 = list(TIER1_ORDER)
     # visible is mutated in place by the widget's l-expansion so the
     # rows the user sees and the numbers they type never disagree.
@@ -2919,9 +2928,11 @@ def _pick_agents(reader, prechecked_ids, det_map):
         print("  no supported agents detected; showing all %d"
               % len(tier1))
         visible[:] = tier1
+    if installed_ids is None:
+        installed_ids = set()
     if reader.raw_keys():
         chosen = _pick_agents_widget(reader, tier1, prechecked_ids,
-                                     det_map, visible)
+                                     det_map, visible, installed_ids)
         if chosen is not None:
             return chosen
         # Esc = back to the scope menu.  The numbered loop below runs
@@ -2931,7 +2942,8 @@ def _pick_agents(reader, prechecked_ids, det_map):
     while True:
         n = len(visible)
         for i, a in enumerate(visible, 1):
-            print("  " + _agent_menu_row(i, a, det_map))
+            print("  " + _agent_menu_row(i, a, det_map,
+                                         installed=a in installed_ids))
         ans = _inp(
             reader,
             "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
@@ -2971,8 +2983,13 @@ def _tui_user(args, reader, source):
     prechecked = set(aid for aid in TIER1_ORDER if aid in det_map)
     requested = [a for a in _parse_requested_agents(args) if a in TIER1_SET]
     prechecked.update(requested)
+    # already-installed agents (user scope): the picker renders their
+    # checked rows as [X] so a re-run shows what is in place
+    installed_ids = set()
+    for f in scan_removal(None, "user", None, None, args.block_id):
+        installed_ids.update(f["agents"])
 
-    chosen = _pick_agents(reader, prechecked, det_map)
+    chosen = _pick_agents(reader, prechecked, det_map, installed_ids)
     if chosen is _BACK:
         return _BACK
     if not chosen:
