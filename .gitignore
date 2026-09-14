@@ -6,5 +6,6 @@ doc/
 INSTALLER-PLAN.md
 PROMOTION.md
 STEPS.md
+TODO*.md
 __pycache__/
 .pytest_cache/
