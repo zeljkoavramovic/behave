@@ -88,23 +88,18 @@ DROP_CONSENT = (
 #   "x" XDG config base ($XDG_CONFIG_HOME or ~/.config)
 #   "a" %APPDATA%
 #   "f" $FLATPAK_XDG_CONFIG_HOME
-#   "c" current working directory (report-only signal)
 #   "p" absolute path (as-is)
-# flags: "cwd" (has cwd markers),
-#        "content" (package.json content check), "never" (pseudo entry),
-#        "deprecated" (report-only deprecation notice)
+# flags: "deprecated" (report-only deprecation notice)
 AGENTS: List[Dict[str, Any]] = [
     {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 1, "flags": ()},
     {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 1, "flags": ()},
     {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 1, "flags": ()},
     {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 1, "flags": ()},
-    {"id": "astrbot", "env": None, "markers": [("c", "data/skills"), ("h", ".astrbot")], "tier": 3, "flags": ("cwd",)},
     {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
     {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 1, "flags": ()},
     {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
     {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ()},
     {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
-    {"id": "codebuddy", "env": None, "markers": [("c", ".codebuddy"), ("h", ".codebuddy")], "tier": 3, "flags": ("cwd",)},
     # codebuff: the CLI writes ~/.config/manicode (legacy vendor name;
     # rebranding traces codebuff -> freebuff in the source);
     # FREEBUFF_CONFIG_DIR exists but the plain path is used, and
@@ -113,14 +108,12 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "codewhale", "env": "CODEWHALE_HOME", "markers": [("h", ".codewhale")], "tier": 1, "flags": ()},
     {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")], "tier": 1, "flags": ()},
     {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 1, "flags": ()},
-    {"id": "continue", "env": None, "markers": [("c", ".continue"), ("h", ".continue")], "tier": 3, "flags": ("cwd",)},
     {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")], "tier": 1, "flags": ()},
     {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 1, "flags": ()},
     {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
     {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
     {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
     {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
-    {"id": "eve", "env": None, "markers": [], "tier": 3, "flags": ("content", "cwd")},
     # forgecode: FORGE_CONFIG override exists but detection/install use
     # the plain ~/.forge path; the legacy ~/forge dir is presence-only,
     # not a marker.
@@ -136,7 +129,6 @@ AGENTS: List[Dict[str, Any]] = [
     # use the plain ~/.hermes path (qwen-code precedent); the Windows
     # native default is %LOCALAPPDATA%\hermes - marker stays ~/.hermes.
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 1, "flags": ()},
-    {"id": "jazz", "env": None, "markers": [("h", ".jazz"), ("c", ".jazz")], "tier": 3, "flags": ()},
     {"id": "jcode", "env": "JCODE_HOME", "markers": [("h", ".jcode")], "tier": 1, "flags": ()},
     {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
     {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ("deprecated",)},
@@ -165,7 +157,6 @@ AGENTS: List[Dict[str, Any]] = [
     # use the plain ~/.qoder-cn path.
     {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 1, "flags": ()},
     {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
-    {"id": "replit", "env": None, "markers": [("c", ".replit")], "tier": 3, "flags": ("cwd",)},
     # reasonix: home = REASONIX_HOME env (detection override only) ||
     # REASONIX_STATE_HOME || ~/.reasonix (Unix, literal homedir) /
     # %APPDATA%\reasonix (Windows) - the APPDATA marker fixes Windows
@@ -188,8 +179,6 @@ AGENTS: List[Dict[str, Any]] = [
     # README.pochi.md and AGENTS.md at cwd load - install writes only
     # the family AGENTS.md, never a project README.pochi.md.
     {"id": "pochi", "env": None, "markers": [("h", ".pochi")], "tier": 1, "flags": ()},
-    {"id": "promptscript", "env": None, "markers": [("c", ".promptscript"), ("c", "promptscript.yaml")], "tier": 3, "flags": ("cwd",)},
-    {"id": "universal", "env": None, "markers": [], "tier": 3, "flags": ("never",)},
 ]
 
 AGENT_BY_ID = dict((a["id"], a) for a in AGENTS)
@@ -481,85 +470,48 @@ def zed_dirs():
 # ---------------------------------------------------------------------------
 
 
-def _eve_present(cwd):
-    agent_dir = cwd / "agent"
-    if not agent_dir.is_dir():
-        return False
-    pkg = cwd / "package.json"
-    if not pkg.is_file():
-        return False
-    try:
-        data = json.loads(pkg.read_text(encoding="utf-8", errors="replace"))
-    except ValueError:
-        return False
-    if not isinstance(data, dict):
-        return False
-    for key in ("dependencies", "devDependencies"):
-        deps = data.get(key)
-        if isinstance(deps, dict) and "eve" in deps:
-            return True
-    return False
-
-
-def detect_agents(cwd=None):
-    """Returns a list of dicts: id, tier, flags, paths, cwd_only."""
+def detect_agents():
+    """Returns a list of dicts: id, tier, flags, paths."""
     home = home_base()
     xdg = xdg_base()
     appd = appdata_base()
     flat = flatpak_xdg_base()
-    cwd = Path(cwd) if cwd else Path.cwd()
     results = []
     for ag in AGENTS:
-        if "never" in ag["flags"]:
-            continue
         matched = []
-        cwd_matched = False
-        home_matched = False
-        if "content" in ag["flags"] and ag["id"] == "eve":
-            if _eve_present(cwd):
-                matched.append(cwd / "agent")
-                cwd_matched = True
-        else:
-            override = os.environ.get(ag["env"]) if ag["env"] else None
-            seen = set()
-            for base, rel in ag["markers"]:
-                if base == "h":
-                    p = Path(override) if override else home / rel
-                elif base == "x":
-                    p = xdg / rel
-                elif base == "a":
-                    if appd is None:
-                        continue
-                    p = appd / rel
-                elif base == "f":
-                    if flat is None:
-                        continue
-                    p = flat / rel
-                elif base == "c":
-                    p = cwd / rel
-                else:  # "p" absolute
-                    p = Path(rel)
-                key = str(p).lower()
-                if key in seen:
+        override = os.environ.get(ag["env"]) if ag["env"] else None
+        seen = set()
+        for base, rel in ag["markers"]:
+            if base == "h":
+                p = Path(override) if override else home / rel
+            elif base == "x":
+                p = xdg / rel
+            elif base == "a":
+                if appd is None:
                     continue
-                seen.add(key)
-                try:
-                    exists = p.exists()
-                except OSError:
-                    exists = False
-                if exists:
-                    matched.append(p)
-                    if base == "c":
-                        cwd_matched = True
-                    elif base == "h":
-                        home_matched = True
+                p = appd / rel
+            elif base == "f":
+                if flat is None:
+                    continue
+                p = flat / rel
+            else:  # "p" absolute
+                p = Path(rel)
+            key = str(p).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            try:
+                exists = p.exists()
+            except OSError:
+                exists = False
+            if exists:
+                matched.append(p)
         if matched:
             results.append({
                 "id": ag["id"],
                 "tier": ag["tier"],
                 "flags": ag["flags"],
                 "paths": matched,
-                "cwd_only": cwd_matched and not home_matched,
             })
     return results
 
@@ -1885,8 +1837,6 @@ def cmd_list(args):
         note = ""
         if d["id"] == "windsurf":
             note = "  (deprecated IDE; upgrade to Devin Desktop)"
-        elif d["cwd_only"]:
-            note = "  (cwd marker; report-only)"
         elif d["id"] not in TIER1_SET:
             note = "  (no install support)"
         paths = ", ".join(str(p) for p in d["paths"])
@@ -2908,8 +2858,8 @@ def _tui_user(args, reader, source):
     print("Scanning for installed agents...")
     det = detect_agents()
     det_map = dict((d["id"], d) for d in det)
-    # TIER1 agents are never cwd-flagged, so plain det_map membership
-    # is the detected test here; the agent menu below IS the report.
+    # plain det_map membership is the detected test here; the agent
+    # menu below IS the report.
     prechecked = set(aid for aid in TIER1_ORDER if aid in det_map)
     others = sorted(d["id"] for d in det
                     if d["id"] not in TIER1_SET and d["id"] != "windsurf")

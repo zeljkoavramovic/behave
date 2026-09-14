@@ -132,7 +132,7 @@ def detected_ids(out):
     return ids
 
 
-# Test 15: detection: fake HOME markers, env override, multi-marker, eve
+# Test 15: detection: fake HOME markers, env override, multi-marker
 def test_15_detection(run, env_for, fake_home, tmp_path):
     (fake_home / ".claude").mkdir()
     (fake_home / ".kimi-code").mkdir()
@@ -164,18 +164,6 @@ def test_15_detection(run, env_for, fake_home, tmp_path):
     r3 = run(["--list"], env=env3)
     assert "claude-code" in detected_ids(r3.stdout)
     assert str(custom) in r3.stdout
-
-    ev = tmp_path / "evproj"
-    (ev / "agent").mkdir(parents=True)
-    (ev / "package.json").write_text('{"dependencies": {"eve": "^1.0"}}')
-    ids4 = detected_ids(run(["--list"], env=env_for(fake_home),
-                            cwd=ev).stdout)
-    assert "eve" in ids4
-    (ev / "package.json").write_text(
-        '{"dependencies": {"left-pad": "^1.0"}}')
-    ids5 = detected_ids(run(["--list"], env=env_for(fake_home),
-                            cwd=ev).stdout)
-    assert "eve" not in ids5
 
 
 # Test 16: both devin markers present -> both targets written
