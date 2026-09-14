@@ -310,11 +310,11 @@ def test_piped_stdin_widget_not_engaged(run, env_for, fake_home, src_file):
     full = int(m.group(1))
     assert ("no supported agents detected; showing all %d" % full) \
         in r.stdout
-    assert "a = all shown" in r.stdout
-    assert "Enter = checked/detected" in r.stdout
+    assert "s = select all shown" in r.stdout
+    assert "ENTER = checked/detected" in r.stdout
     assert "Proceed? [y/N] (q quits)" in r.stdout
     # widget-only strings must not appear on the pipe path
-    assert "Space toggles" not in r.stdout
+    assert "SPACE toggles" not in r.stdout
     assert "typing also works" not in r.stdout
     # no ANSI escape sequences anywhere (widget redraw is the only emitter)
     assert "\x1b[" not in r.stdout
@@ -343,7 +343,7 @@ def test_agent_menu_detected_first_l_expands(run, env_for, fake_home,
                         r.stdout)
     full = int(ranges[-1])
     assert full > 2
-    assert "a = all shown" in r.stdout
+    assert "s = select all shown" in r.stdout
     # full-list positions after expansion: gemini-cli is #6, undetected
     assert "6  Gemini CLI" in r.stdout
     assert "quit; nothing written" in combined
@@ -365,7 +365,7 @@ def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
                         r.stdout)
     full = int(ranges[-1])
     assert full > 1
-    assert "a = all shown" in r.stdout
+    assert "s = select all shown" in r.stdout
     g = fake_home / ".gemini" / "GEMINI.md"
     assert g.is_file()
     assert g.read_bytes().startswith(B)
@@ -373,12 +373,12 @@ def test_agent_menu_l_then_number_installs_nondetected(run, env_for,
 
 
 # zero detections: Enter (= default) reports nothing pre-checked and
-# re-asks; 'a' then selects every supported agent (confirm declined to
+# re-asks; 's' then selects every supported agent (confirm declined to
 # stay read-only); the count strings must agree with the menu range
 def test_agent_menu_zero_detections_enter_then_all(run, env_for,
                                                    fake_home, src_file):
     r = run(["--interactive", "--source", str(src_file)],
-            env=env_for(fake_home), cwd=fake_home, input_text="u\n\na\nn\n")
+            env=env_for(fake_home), cwd=fake_home, input_text="u\n\ns\nn\n")
     combined = r.stdout + r.stderr
     assert r.returncode == 0, combined
     m = re.search(r"Install into which agents\? \[1-(\d+)\]", r.stdout)
@@ -386,15 +386,15 @@ def test_agent_menu_zero_detections_enter_then_all(run, env_for,
     full = int(m.group(1))
     assert ("no supported agents detected; showing all %d" % full) \
         in r.stdout
-    assert "a = all shown" in r.stdout
+    assert "s = select all shown" in r.stdout
     assert "nothing is pre-checked" in r.stdout
     assert "What will change" in r.stdout
     assert "aborted; nothing written" in combined
     assert "Traceback" not in combined
 
 
-# 'a' selects the SHOWN (detected) rows only: with two detections the
-# a-answer installs exactly those two and creates no dir for any
+# 's' selects the SHOWN (detected) rows only: with two detections the
+# s-answer installs exactly those two and creates no dir for any
 # undetected agent (a = all-N used to install every supported agent,
 # littering empty config dirs across the profile; owner 2026-09-14)
 def test_agent_menu_all_shown_installs_only_detected(run, env_for,
@@ -402,10 +402,10 @@ def test_agent_menu_all_shown_installs_only_detected(run, env_for,
     (fake_home / ".claude").mkdir()
     (fake_home / ".codex").mkdir()
     r = run(["--interactive", "--source", str(src_file)],
-            env=env_for(fake_home), cwd=fake_home, input_text="u\na\ny\n")
+            env=env_for(fake_home), cwd=fake_home, input_text="u\ns\ny\n")
     combined = r.stdout + r.stderr
     assert r.returncode == 0, combined
-    assert "a = all shown" in r.stdout
+    assert "s = select all shown" in r.stdout
     assert (fake_home / ".claude" / "rules" / "behave.md").is_file()
     assert (fake_home / ".codex" / "AGENTS.md").is_file()
     # nothing written for ANY undetected agent
@@ -516,11 +516,11 @@ def test_widget_row_keys_map_rows_to_grammar():
     assert "rowkeys-ok" in r.stdout
 
 
-# the widget's 'a' toggles all/none of the SHOWN rows (the footer hint
-# flips with the checkbox state), never returns an undetected agent on
-# its own, and l + a still reaches every supported agent; same fake
-# reader / subprocess pattern as the row-keys test above
-def test_widget_a_toggles_shown_rows_only():
+# the widget's 's' toggles select all / select none of the SHOWN rows
+# (the footer hint flips with the checkbox state), never returns an
+# undetected agent on its own, and l + s still reaches every supported
+# agent; same fake reader / subprocess pattern as the row-keys test above
+def test_widget_s_toggles_shown_rows_only():
     code = (
         "import install as I\n"
         "class R:\n"
@@ -535,28 +535,28 @@ def test_widget_a_toggles_shown_rows_only():
         "                     'paths': ['/hx/.codex']}}\n"
         "def fresh():\n"
         "    return [a for a in tier1 if a in det_map]\n"
-        "# 1) everything pre-checked: a flips to none, a flips back to\n"
+        "# 1) everything pre-checked: s flips to none, s flips back to\n"
         "#    all, Space then narrows to the second row\n"
         "w1 = I._pick_agents_widget(\n"
-        "    R(['a', 'enter', 'a', 'enter', 'space', 'enter']),\n"
+        "    R(['s', 'enter', 's', 'enter', 'space', 'enter']),\n"
         "    tier1, {'claude-code', 'codex'}, det_map, fresh())\n"
         "assert w1 == ['codex'], w1\n"
-        "# 2) partial pre-check: a checks every SHOWN row - and only\n"
-        "#    those (52-agent tier1 must NOT come back from 'a' alone)\n"
-        "w2 = I._pick_agents_widget(R(['a', 'enter', 'enter']),\n"
+        "# 2) partial pre-check: s checks every SHOWN row - and only\n"
+        "#    those (52-agent tier1 must NOT come back from 's' alone)\n"
+        "w2 = I._pick_agents_widget(R(['s', 'enter', 'enter']),\n"
         "                           tier1, {'claude-code'}, det_map,\n"
         "                           fresh())\n"
         "assert w2 == ['claude-code', 'codex'], w2\n"
-        "# 3) l expands the view first; THEN a checks every supported\n"
+        "# 3) l expands the view first; THEN s checks every supported\n"
         "#    agent - the everywhere-install stays reachable, opt-in\n"
         "vis3 = fresh()\n"
-        "w3 = I._pick_agents_widget(R(['l', 'enter', 'a', 'enter',\n"
+        "w3 = I._pick_agents_widget(R(['l', 'enter', 's', 'enter',\n"
         "                              'enter']),\n"
         "                           tier1, {'claude-code'}, det_map,\n"
         "                           vis3)\n"
-        "assert w3 == tier1, 'l + a must still select every agent'\n"
+        "assert w3 == tier1, 'l + s must still select every agent'\n"
         "assert vis3 == tier1\n"
-        "print('atoggle-ok')\n"
+        "print('stoggle-ok')\n"
     )
     r = subprocess.run(
         [sys.executable, "-c", code],
@@ -568,10 +568,10 @@ def test_widget_a_toggles_shown_rows_only():
         timeout=60,
     )
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "atoggle-ok" in r.stdout
+    assert "stoggle-ok" in r.stdout
     # the footer wording flips with the checkbox state across redraw 1
-    assert "a = all, l = list all" in r.stdout
-    assert "a = none, l = list all" in r.stdout
+    assert "s = select all, l = list all" in r.stdout
+    assert "s = select none, l = list all" in r.stdout
 
 
 # P5.2: the pure key decoders (ANSI escape bytes -> key names;
@@ -1037,7 +1037,7 @@ def test_ascii_flag_forces_numbered_prompts(run, env_for, fake_home,
     combined = r.stdout + r.stderr
     assert r.returncode == 0, combined
     assert "Install into which agents? [1-1]" in r.stdout
-    assert "Space toggles" not in r.stdout  # widget never engaged
+    assert "SPACE toggles" not in r.stdout  # widget never engaged
     assert chr(27) + "[" not in r.stdout
     assert "Traceback" not in combined
     drop = fake_home / ".claude" / "rules" / "behave.md"

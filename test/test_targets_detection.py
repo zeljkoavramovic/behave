@@ -136,14 +136,18 @@ def detected_ids(out):
 def test_15_detection(run, env_for, fake_home, tmp_path):
     (fake_home / ".claude").mkdir()
     (fake_home / ".kimi-code").mkdir()
+    # windsurf and iflow-cli left the registry (detect-only removal):
+    # their marker dirs alone must produce no detection and no note
     (fake_home / ".codeium" / "windsurf").mkdir(parents=True)
+    (fake_home / ".iflow").mkdir()
     r = run(["--list"], env=env_for(fake_home))
     assert r.returncode == 0, r.stdout + r.stderr
     ids = detected_ids(r.stdout)
     assert "claude-code" in ids
     assert "kimi-code-cli" in ids
-    assert "windsurf" in ids
-    assert "deprecated" in r.stdout
+    assert "windsurf" not in ids
+    assert "iflow-cli" not in ids
+    assert "deprecated" not in r.stdout
     # the known-id count must agree with the ids actually listed
     # (derived from the run's own output - never a stale literal)
     m = re.search(r"All known ids \((\d+)\):\n\s+(.+)", r.stdout)

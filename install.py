@@ -136,7 +136,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 1, "flags": ()},
     {"id": "jcode", "env": "JCODE_HOME", "markers": [("h", ".jcode")], "tier": 1, "flags": ()},
     {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
-    {"id": "iflow-cli", "env": None, "markers": [("h", ".iflow")], "tier": 3, "flags": ("deprecated",)},
     {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
     # kimchi: entry.ts hardcodes homedir()/.config/kimchi/harness and
     # force-sets its env vars (KIMCHI_CODING_AGENT_DIR etc. - overrides
@@ -174,7 +173,6 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 1, "flags": ()},
     {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 1, "flags": ()},
     {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
-    {"id": "windsurf", "env": None, "markers": [("h", ".codeium/windsurf")], "tier": 3, "flags": ("deprecated",)},
     {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
     {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ()},
     # pochi: user-global rules = ~/.pochi/README.pochi.md ONLY (the
@@ -1860,9 +1858,7 @@ def cmd_list(args):
         print("  (none)")
     for d in det:
         note = ""
-        if d["id"] == "windsurf":
-            note = "  (deprecated IDE; upgrade to Devin Desktop)"
-        elif d["id"] not in TIER1_SET:
+        if d["id"] not in TIER1_SET:
             note = "  (no install support)"
         paths = ", ".join(str(p) for p in d["paths"])
         print("  %-16s %s%s" % (d["id"], paths, note))
@@ -1894,12 +1890,8 @@ def cmd_install(args):
             if d["id"] in TIER1_SET:
                 if d["id"] not in agents:
                     agents.append(d["id"])
-            elif d["id"] != "windsurf":
+            else:
                 unsupported_detected.append(d["id"])
-        ws = [d for d in det if d["id"] == "windsurf"]
-        if ws:
-            say("note: windsurf detected (deprecated IDE; upgrade to Devin "
-                "Desktop)")
         if unsupported_detected:
             say("note: detected without install support: %s"
                 % ", ".join(sorted(unsupported_detected)))
@@ -2385,7 +2377,7 @@ def _parse_selection(answer, n):
     answer = answer.strip().lower()
     if answer == "":
         return "default"
-    if answer == "a":
+    if answer == "s":
         return "all"
     if answer == "l":
         return "list"
@@ -2619,7 +2611,7 @@ def _arrow_menu(reader, title, rows, multi=False, checked=(),
     checked bool list (multi), or on_text's value for a typed buffer;
     or ("esc", None).  footer may be a zero-arg callable - it is
     evaluated on every redraw so a menu whose state changes mid-flight
-    (the agent picker's a-toggle) can reword its own hint."""
+    (the agent picker's s-toggle) can reword its own hint."""
     vt = _vt_ok()
     pos = 0
     # multi: keep the CALLER's list object, not a copy - the agent
@@ -2776,7 +2768,8 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
     place by that expansion (the in-place protocol below explains
     why).  Enter with an empty buffer submits the checked rows;
     typed buffers go through the same _parse_selection grammar as the
-    numbered prompt; a toggles all/none of the SHOWN rows only - it
+    numbered prompt; s toggles select all / select none of the SHOWN
+    rows only - it
     can never check (and install into) an agent that was not
     detected; l first expands the view when every supported agent is
     really wanted.  Returns None when the user pressed Esc - the
@@ -2798,11 +2791,11 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
         checked[:] = [a in pre for a in visible]
 
     def footer():
-        # a = all/none: the hint names what 'a' would do NEXT, so it
-        # flips with the checkbox state instead of promising a fixed
-        # "all" that stopped being true two keypresses ago.
+        # s = select all / select none: the hint names what 's' would do
+        # NEXT, so it flips with the checkbox state instead of promising
+        # a fixed "all" that stopped being true two keypresses ago.
         state = "none" if checked and all(checked) else "all"
-        return "  a = %s, l = list all, q = quit" % state
+        return "  s = select %s, l = list all, q = quit" % state
 
     def on_text(buf):
         if buf.strip().lower() in ("q", "quit"):
@@ -2812,10 +2805,10 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
             expand()
             return _MENU_AGAIN
         if res == "all":
-            # owner 2026-09-14: 'a' used to return every supported
-            # agent, which installed (and left dirs behind for)
+            # owner 2026-09-14: 's' used to be 'a', which returned every
+            # supported agent, installing (and leaving dirs behind for)
             # agents that were never detected.  It now toggles the
-            # SHOWN rows like one big Space press; l + a still
+            # SHOWN rows like one big Space press; l + s still
             # reaches every supported agent when that is wanted.
             checked[:] = [not all(checked)] * len(visible)
             return _MENU_AGAIN
@@ -2823,25 +2816,25 @@ def _pick_agents_widget(reader, tier1, prechecked_ids, det_map, visible):
             if pre:
                 return [a for a in tier1 if a in pre]
             print("nothing is pre-checked (no supported agents detected); "
-                  "pick numbers or 'a'")
+                  "pick numbers or 's'")
             return _MENU_AGAIN
         if res is None:
             print("not understood: use numbers (1), ranges (1-4), lists "
-                  "(1,3), a, l, q, or Enter")
+                  "(1,3), s, l, q, or ENTER")
             return _MENU_AGAIN
         return [visible[i - 1] for i in res]
 
     kind, value = _arrow_menu(
         reader,
-        ["Install into which agents?  (Space toggles [x]; Enter = the "
+        ["Install into which agents?  (SPACE toggles [x]; ENTER = the "
          "checked items;",
-         "Esc = back to the previous menu; typing also works: numbers (3), "
+         "ESC = back to the previous menu; typing also works: numbers (3), "
          "ranges (4-7), lists (2,5); l = list all, q = quit)"],
         rows, multi=True, checked=checked,
         footer=footer,
         on_text=on_text,
-        empty_msg="nothing is checked: Space toggles rows, or type 'a' + "
-                  "Enter for all shown")
+        empty_msg="nothing is checked: SPACE toggles rows, or type 's' + "
+                  "ENTER to select all shown")
     if kind == "esc":
         return None
     if isinstance(value, list) and value and isinstance(value[0], bool):
@@ -2877,14 +2870,14 @@ def _pick_agents(reader, prechecked_ids, det_map):
         ans = _inp(
             reader,
             "Install into which agents? [1-%d] (e.g. 3 or 2,5 or 4-7; "
-            "Enter = checked/detected, a = all shown, l = list all, "
-            "q = quit)\n> " % n)
+            "ENTER = checked/detected, s = select all shown, "
+            "l = list all, q = quit)\n> " % n)
         res = _parse_selection(ans, n)
         if res == "list":
             visible[:] = tier1
             continue
         if res == "all":
-            # widget parity (owner 2026-09-14): 'a' selects the SHOWN
+            # widget parity (owner 2026-09-14): 's' selects the SHOWN
             # rows - never a hidden undetected agent.  The numbered
             # prompt is one-shot (no [x] state to flip), so selecting
             # none = typing only the numbers you want.
@@ -2893,33 +2886,24 @@ def _pick_agents(reader, prechecked_ids, det_map):
             if prechecked_ids:
                 return [a for a in tier1 if a in prechecked_ids]
             print("nothing is pre-checked (no supported agents detected); "
-                  "pick numbers or 'a'")
+                  "pick numbers or 's'")
             continue
         if res is None:
             print("not understood: use numbers (1), ranges (1-4), lists "
-                  "(1,3), a, l, q, or Enter")
+                  "(1,3), s, l, q, or ENTER")
             continue
         return [visible[i - 1] for i in res]
 
 
 def _tui_user(args, reader, source):
     print()
-    print("Scanning for installed agents...")
+    print("Scanning for installed agents (%d supported, see --list)..."
+          % len(TIER1_ORDER))
     det = detect_agents()
     det_map = dict((d["id"], d) for d in det)
     # plain det_map membership is the detected test here; the agent
     # menu below IS the report.
     prechecked = set(aid for aid in TIER1_ORDER if aid in det_map)
-    others = sorted(d["id"] for d in det
-                    if d["id"] not in TIER1_SET and d["id"] != "windsurf")
-    if others:
-        print("  also detected (no install support yet): %s" % ", ".join(others))
-    if "windsurf" in det_map:
-        print("  windsurf is a deprecated IDE; upgrade to Devin Desktop "
-              "(devin carries the install targets)")
-    print("  (%d supported agents - l shows the rest; %d known agents "
-          "total, see --list; unsupported ones are reported, never "
-          "installed)" % (len(TIER1_ORDER), len(AGENTS)))
     requested = [a for a in _parse_requested_agents(args) if a in TIER1_SET]
     prechecked.update(requested)
 
