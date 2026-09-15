@@ -801,12 +801,6 @@
       line-height: 1.5;
     }
 
-    .feature-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-
     /* === BEFORE/AFTER (Step 3: Explain Value - Comparison) === */
     .compare { background: var(--bg-elevated); }
     .compare-header {
@@ -921,7 +915,7 @@
     }
 
     .faq-item.open .faq-answer {
-      max-height: 300px;
+      max-height: 480px;
       padding-bottom: 20px;
     }
 
@@ -1183,7 +1177,7 @@
             </a>
           </div>
           <div class="install-block" id="install">
-            <div class="install-label">Install in 30 seconds<span class="install-note"> (recommended installer)</span></div>
+            <div class="install-label">Install in 30 seconds<span class="install-note"> (recommended installer; Python 3.6+, standard library only, keeps your existing instructions)</span></div>
             <div class="tab-bar">
               <button class="tab-btn active" data-tab="powershell" aria-pressed="true">Windows (PowerShell)</button>
               <button class="tab-btn" data-tab="bash" aria-pressed="false">Linux / macOS</button>
@@ -1196,7 +1190,7 @@
               <code data-code="ps">iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py" -OutFile install.py; python install.py</code>
               <code data-code="bash" style="display:none">curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py -o install.py && python3 install.py</code>
             </div>
-            <div class="install-label manual-label">Manual install<span class="install-note"> (no Python needed; existing file backed up to <code>CLAUDE.backup.md</code>)</span></div>
+            <div class="install-label manual-label">Manual install<span class="install-note"> (no Python needed; replaces the whole file - existing file backed up to <code>CLAUDE.backup.md</code>, not managed by <code>--remove</code>)</span></div>
             <div class="tab-bar">
               <button class="tab-btn active" data-tab="powershell" aria-pressed="true">Windows (PowerShell)</button>
               <button class="tab-btn" data-tab="bash" aria-pressed="false">Linux / macOS</button>
@@ -1209,7 +1203,7 @@
               <code data-code="ps">mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md" -OutFile "$HOME\.claude\CLAUDE.md"</code>
               <code data-code="bash" style="display:none">mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o ~/.claude/CLAUDE.md</code>
             </div>
-            <p class="install-readme">More options in the <a href="https://github.com/zeljkoavramovic/behave#installation" target="_blank" rel="noopener">README installation section</a></p>
+            <p class="install-readme">Update = re-run the installer; uninstall = <code>python install.py --remove</code>. More options in the <a href="https://github.com/zeljkoavramovic/behave#installation" target="_blank" rel="noopener">README installation section</a>.</p>
           </div>
         </div>
 
@@ -1231,9 +1225,9 @@
             <rect x="28" y="198" width="155" height="6" rx="3" fill="#8b949e" opacity="0.2"/>
             <rect x="28" y="212" width="100" height="6" rx="3" fill="#f85149" opacity="0.15"/>
             <!-- Warning icons -->
-            <circle cx="168" y="54" r="10" fill="rgba(248,81,73,0.15)" stroke="#f85149" stroke-width="1"/>
+            <circle cx="168" cy="54" r="10" fill="rgba(248,81,73,0.15)" stroke="#f85149" stroke-width="1"/>
             <text x="168" y="58" text-anchor="middle" fill="#f85149" font-family="system-ui,sans-serif" font-size="12" font-weight="bold">!</text>
-            <circle cx="168" y="118" r="10" fill="rgba(248,81,73,0.15)" stroke="#f85149" stroke-width="1"/>
+            <circle cx="168" cy="118" r="10" fill="rgba(248,81,73,0.15)" stroke="#f85149" stroke-width="1"/>
             <text x="168" y="122" text-anchor="middle" fill="#f85149" font-family="system-ui,sans-serif" font-size="12" font-weight="bold">!</text>
             <!-- Scattered elements -->
             <rect x="40" y="232" width="40" height="40" rx="4" fill="#f85149" opacity="0.08" stroke="#f85149" stroke-width="0.5"/>
@@ -1263,9 +1257,9 @@
             <rect x="270" y="168" width="80" height="6" rx="3" fill="#3fb950" opacity="0.4"/>
             <rect x="270" y="182" width="120" height="6" rx="3" fill="#c9d1d9" opacity="0.2"/>
             <!-- Checkmarks -->
-            <circle cx="398" y="54" r="10" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
+            <circle cx="398" cy="54" r="10" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
             <polyline points="394,54 397,57 403,51" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="398" y="118" r="10" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
+            <circle cx="398" cy="118" r="10" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
             <polyline points="394,118 397,121 403,115" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             <!-- Ordered blocks -->
             <rect x="258" y="220" width="155" height="24" rx="4" fill="rgba(63,185,80,0.06)"/>
@@ -1816,6 +1810,16 @@
             </button>
             <div class="faq-answer">
               <p>Yes. Commit it to your repo as a project-level file. Everyone on the team gets the same guardrails and the same behavioral contract with their AI assistant. Consistency across developers, not just across sessions.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              How do I update or uninstall it?
+              <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer">
+              <p>Re-run the installer to update - it replaces its own marked block and leaves the rest of your files untouched. To uninstall, run <code>python install.py --remove</code>: it finds every file the installer wrote and cleans only its own block or file. A manual copy carries no markers, so remove that one by hand.</p>
             </div>
           </div>
         </div>
