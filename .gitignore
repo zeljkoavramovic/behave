@@ -7,5 +7,6 @@ INSTALLER-PLAN.md
 PROMOTION.md
 STEPS.md
 TODO*.md
+GITHUB-ACTIONS.md
 __pycache__/
 .pytest_cache/
