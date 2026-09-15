@@ -170,6 +170,8 @@ for safer, smaller, verifiable AI coding changes"]
 
 ## Installation
 
+The repo ships two files. `BEHAVE.md` is the rules file itself - pure Markdown, zero dependencies, one file you could also copy by hand. `install.py` is the installer - a single cross-platform Python script, standard library only (Python 3.6 or newer), which writes the rules into the right file with the right name for each agent.
+
 ### Installer (recommended)
 
 **Windows (PowerShell):**
@@ -184,9 +186,30 @@ iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py"
 curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py -o install.py && python3 install.py
 ```
 
-Use `python`, `python3`, or `py` per your platform (on Windows, `py install.py` also works). No registry, no account, no npm - one Python script, standard library only.
+Use `python`, `python3`, or `py` per your platform (on Windows, `py install.py` also works). No registry, no account, no npm - one Python script, standard library only, Python 3.6 or newer.
 
-The installer asks where the rules should apply (all your projects or just this one), auto-detects your installed agents - 52 supported: Claude Code, Codex, OpenCode, Pi, Oh My Pi, Devin, Cursor, Gemini CLI, and GitHub Copilot, plus Roo Code, Augment Code, Kilo Code, Droid, Deep Agents, Cline, Crush, Amp, Goose, Zed, OpenHands, Warp, Junie, Posit Assistant, ZCode, OpenClaw, Kimi Code, Qwen Code, Trae, Antigravity, Kiro, Qoder, Grok Build, Mistral Vibe, Rovo Dev, IBM Bob, Trae CN, Cortex Code, Antigravity CLI, Xum, Hermes Agent, AiderDesk, ForgeCode, Command Code, Qoder CN, Tabnine CLI, Codewhale, jcode, Codebuff, Kimchi, Pochi, Reasonix, and DeepSeek Harness - shows exactly what will change, and asks before writing. Run `python install.py --list` to see every agent it detects on your machine. Update = re-run. Uninstall = `python install.py --remove`. For headless or CI use, see `python install.py --help`. In the agent picker, a checked row for an agent that already has the rules installed shows `[X]` instead of `[x]` - the mark follows the checkbox as you toggle it, and re-running with it checked updates the existing install. Terminals without arrow-key support (or piped input) get the same cue in the numbered fallback as an `(installed)` suffix on the row.
+The installer asks where the rules should apply (all your projects or just this one), auto-detects your installed agents, shows exactly what will change, and asks before writing. It supports 52 agents:
+
+<details>
+<summary>Full agent list (52)</summary>
+
+Claude Code, Codex, OpenCode, Pi, Oh My Pi, Devin, Cursor, Gemini CLI, GitHub Copilot, Roo Code, Augment Code, Kilo Code, Droid, Deep Agents, Cline, Crush, Amp, Goose, Zed, OpenHands, Warp, Junie, Posit Assistant, ZCode, OpenClaw, Kimi Code, Qwen Code, Trae, Antigravity, Kiro, Qoder, Grok Build, Mistral Vibe, Rovo Dev, IBM Bob, Trae CN, Cortex Code, Antigravity CLI, Xum, Hermes Agent, AiderDesk, ForgeCode, Command Code, Qoder CN, Tabnine CLI, Codewhale, jcode, Codebuff, Kimchi, Pochi, Reasonix, and DeepSeek Harness
+
+</details>
+
+Run `python install.py --list` to see every agent it detects on your machine. For headless or CI use, see `python install.py --help`. In the agent picker, a checked row for an agent that already has the rules installed shows `[X]` instead of `[x]` - the mark follows the checkbox as you toggle it, and re-running with it checked updates the existing install. Terminals without arrow-key support (or piped input) get the same cue in the numbered fallback as an `(installed)` suffix on the row.
+
+**What the installer writes** (and why re-running is safe):
+
+- **Inline mode**: a marked block (`<!-- BEGIN behave ... -->` down to `<!-- END behave -->`) at the TOP of the agent's memory file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and friends). Everything you already had survives below the block, and a re-run replaces only the block itself.
+- **Drop mode**: a standalone rules file the installer owns, placed in the agent's rules directory (for example `~/.claude/rules/behave.md`); removal deletes the file.
+- **Plain copy**: `--copy-only` writes a bare `BEHAVE.md` and touches nothing else.
+
+For Claude Code at user scope the default is the drop file `~/.claude/rules/behave.md`; pass `--claude-mode inline` for a marked block inside `~/.claude/CLAUDE.md` instead.
+
+**Updating and uninstalling**: update = re-run the installer (`python install.py --all-detected --yes` refreshes every agent it finds on the machine). Uninstall = `python install.py --remove` - it scans every location it knows, shows what it found, and removes only its own block or file.
+
+**Headless and CI**: any flags make the run non-interactive, and writes then need `--yes` (`--copy-only` is exempt). Useful flags: `--all-detected`, `--agent ID[,ID...]` (ids from `--list`), `--scope user|project|local` (default `auto`: project inside a git repo, else user), `--json` for machine-readable output, `--source URL|PATH` with `--sha256 HEX` to pin a fetched rules file to an exact hash (the run aborts before any write on mismatch; URL sources only), `--copy-only` for a plain copy, and `--ascii` for the numbered-prompt interactive mode. Exit codes: `0` success, `1` usage error, `2` unknown or missing agent, `3` source failure, `4` a target failed, `5` confirmation missing.
 
 The repo distributes `BEHAVE.md`. When copying manually into an agent, the filename matters: Claude Code reads `CLAUDE.md`, Gemini CLI reads `GEMINI.md`, most other tools read `AGENTS.md`. The installer handles the naming automatically; manual users must rename.
 
@@ -194,9 +217,9 @@ Cross-agent bonus: Devin and VS Code GitHub Copilot also read `~/.claude/CLAUDE.
 
 One watch-list item: Gemini CLI does not read `AGENTS.md` by default today (tracked in [google-gemini/gemini-cli issue #28227](https://github.com/google-gemini/gemini-cli/issues/28227)). If Google ships default `AGENTS.md` loading, gemini-cli joins the shared `AGENTS.md` family and the installer will treat it like Codex, OpenCode, Pi, Oh My Pi, and Devin.
 
-### Manual install
+### Manual install (no Python)
 
-Copy the file directly, no Python needed.
+Copy the file directly. Unlike the installer, this replaces the whole target file, so an existing `~/.claude/CLAUDE.md` is backed up to `CLAUDE.backup.md` before being overwritten. The result carries no installer markers: `--remove` cannot see or clean it, and a later installer run adds its marked block on top rather than adopting the file.
 
 **Windows (PowerShell):**
 
@@ -212,7 +235,7 @@ mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/nul
 
 If `~/.claude/CLAUDE.md` already exists, it is backed up to `CLAUDE.backup.md` before being overwritten.
 
-Works natively with **Claude Code** and **OpenCode**. For other AI coding tools, follow that tool's instruction file convention (for example `AGENTS.md` or `GEMINI.md`). The content is the same; the filename depends on the tool.
+Works natively with **Claude Code** and **OpenCode**. For other AI coding tools, follow that tool's instruction file convention (for example `AGENTS.md` or `GEMINI.md`). The content is the same; the filename depends on the tool. Prefer the installer even alongside a manual copy: it is idempotent, and only the files it writes are tracked by `--remove`.
 
 ## Related projects
 
