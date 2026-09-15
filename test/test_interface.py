@@ -1233,6 +1233,244 @@ def test_tui_flow_variant_esc_back_pure(tmp_path):
     assert r.stdout.count("Which family?") == 3, r.stdout
 
 
+# Owner fix (#2): flagged project installs resolve through
+# build_install_plan - the family wizard had no letter for
+# tabnine-cli, so `--agent tabnine-cli --scope project` silently
+# vanished into a menu that installed something else.  The flagged
+# path now skips the family menu entirely and writes the real target.
+def test_tui_project_flagged_tabnine_targets_tabnine_md(tmp_path):
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    proj_arg = str(proj).replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--agent', 'tabnine-cli', '--scope', 'project'," + chr(10) +
+        "     '--project-dir', '" + proj_arg + "', '--source', '" + src_arg + "'," + chr(10) +
+        "     '--yes'])" + chr(10) +
+        "rc = I._tui_flow(args, R([]))" + chr(10) +
+        "assert rc == 0, rc" + chr(10) +
+        "print('tabnine-flagged-ok')"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "tabnine-flagged-ok" in r.stdout
+    assert "Which family?" not in r.stdout, r.stdout
+    assert "TABNINE.md" in r.stdout
+    assert (proj / "TABNINE.md").is_file()
+
+
+# Same fix, parity cell: a multi-family pre-selection installs BOTH
+# targets headless-style instead of narrowing to one family via the
+# menu (the preview + confirm gate still shows everything first).
+def test_tui_project_flagged_multi_family_installs_both(tmp_path):
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    proj_arg = str(proj).replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--agent', 'codex,claude-code', '--scope'," + chr(10) +
+        "     'project', '--claude-variant', 'rules'," + chr(10) +
+        "     '--project-dir', '" + proj_arg + "', '--source', '" + src_arg + "'," + chr(10) +
+        "     '--yes'])" + chr(10) +
+        "rc = I._tui_flow(args, R([]))" + chr(10) +
+        "assert rc == 0, rc" + chr(10) +
+        "print('flagged-both-ok')"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "flagged-both-ok" in r.stdout
+    assert "Which family?" not in r.stdout, r.stdout
+    assert (proj / "AGENTS.md").is_file()
+    assert (proj / ".claude" / "rules" / "behave.md").is_file()
+
+
+# Local-scope alignment: interactive --scope local now rides the same
+# build_install_plan branch as headless - non-Claude agents warn-skipped,
+# variant forced to CLAUDE.local.md (gitignore step degrades gracefully
+# outside a git repo).
+def test_tui_scope_local_flagged_skips_non_claude(tmp_path):
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    proj_arg = str(proj).replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--agent', 'codex,claude-code', '--scope', 'local'," + chr(10) +
+        "     '--project-dir', '" + proj_arg + "', '--source', '" + src_arg + "'," + chr(10) +
+        "     '--yes'])" + chr(10) +
+        "rc = I._tui_flow(args, R([]))" + chr(10) +
+        "assert rc == 0, rc" + chr(10) +
+        "print('local-flagged-ok')"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "local-flagged-ok" in r.stdout
+    assert ("warn: local scope supports Claude Code only; skipping codex"
+            in r.stdout), r.stdout
+    assert not (proj / "AGENTS.md").exists()
+    assert (proj / "CLAUDE.local.md").is_file()
+
+
+# Zero-flags local: no agent menu at all - local is claude-only, so the
+# flow previews CLAUDE.local.md directly (the old wizard offered
+# AGENTS.md/GEMINI.md there, which local scope never installs).
+def test_tui_scope_local_zero_flags_defaults_claude(tmp_path):
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    proj_arg = str(proj).replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def __init__(self, keys): self.k = list(keys); self.i = 0" + chr(10) +
+        "    def read_key(self):" + chr(10) +
+        "        v = self.k[self.i]; self.i += 1; return v" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--scope', 'local'," + chr(10) +
+        "     '--project-dir', '" + proj_arg + "', '--source', '" + src_arg + "'," + chr(10) +
+        "     '--yes'])" + chr(10) +
+        "rc = I._tui_flow(args, R([]))" + chr(10) +
+        "assert rc == 0, rc" + chr(10) +
+        "print('local-default-ok')"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "local-default-ok" in r.stdout
+    assert "Which family?" not in r.stdout, r.stdout
+    assert "Which Claude file?" not in r.stdout, r.stdout
+    assert (proj / "CLAUDE.local.md").is_file()
+    assert not (proj / "AGENTS.md").exists()
+
+
+# The headless usage rule travels with it: --scope local rejects any
+# other --claude-variant (same message, same exit code 1, and before
+# any prompt - no TTY input needed).
+def test_tui_scope_local_variant_usage_error(tmp_path):
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    code = (
+        "import install as I" + chr(10) +
+        "class R:" + chr(10) +
+        "    def read_key(self): raise AssertionError('no input expected')" + chr(10) +
+        "    def raw_keys(self): return True" + chr(10) +
+        "args = I.build_parser().parse_args(" + chr(10) +
+        "    ['--interactive', '--scope', 'local', '--claude-variant', 'rules'," + chr(10) +
+        "     '--source', '" + src_arg + "'])" + chr(10) +
+        "rc = I._tui_flow(args, R())" + chr(10) +
+        "assert rc == 1, rc" + chr(10) +
+        "print('local-usage-ok')"
+    )
+    r = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(INSTALL_PY.parent),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "local-usage-ok" in r.stdout
+    assert "usage error: --scope local only supports --claude-variant local" \
+        in r.stderr
+    assert "Project directory" not in r.stdout
+
+
+# Merged-stream ordering: piped stdout is block-buffered while stderr
+# streams immediately, so an error written after the banner used to
+# land ABOVE it in combined captures (observed live).  err() flushes
+# stdout first; this pins the visible order in a 2>&1-style capture.
+def test_err_after_stdout_keeps_merged_order(tmp_path):
+    (tmp_path / "s.md").write_bytes(
+        b"# R" + bytes([10]) + b"body" + bytes([10]))
+    src_arg = str(tmp_path / "s.md").replace(chr(92), "/")
+    r = subprocess.run(
+        [sys.executable, str(INSTALL_PY), "--interactive", "--scope",
+         "local", "--claude-variant", "rules", "--source", src_arg],
+        cwd=str(INSTALL_PY.parent),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+        env={**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)},
+    )
+    assert r.returncode == 1, r.stdout
+    banner = r.stdout.find("BEHAVE.md installer")
+    failure = r.stdout.find("usage error: --scope local only supports "
+                            "--claude-variant local")
+    assert banner != -1 and failure != -1, r.stdout
+    assert banner < failure, r.stdout
+
+
 # Canary round 3: the cursor row renders in reverse video on VT
 
 # terminals (and never emits escapes otherwise - the piped tests

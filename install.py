@@ -320,7 +320,12 @@ def say(msg=""):
 
 
 def err(msg):
-    print("error: " + msg, file=sys.stderr)
+    # piped stdout is block-buffered while stderr streams immediately:
+    # without this flush an error lands ABOVE the stdout lines it
+    # belongs under in any merged capture (observed: usage error
+    # printed before the banner)
+    sys.stdout.flush()
+    print("error: " + msg, file=sys.stderr, flush=True)
 
 
 class TargetError(Exception):
@@ -2904,11 +2909,61 @@ def _tui_pick_family(reader, forced=None):
         print("  answer a, c, g, j or q")
 
 
-def _tui_project(args, reader, source, pre_variant):
+def _tui_project_flagged(reader, source, requested, pre_variant, project_dir,
+                         args, scope="project"):
+    """Flags pre-selected agents: resolve targets through
+    build_install_plan, exactly like the headless run.  The family
+    wizard's a/c/g/j menu cannot represent tabnine-cli, trae or a
+    copilot-only selection, which made those agents vanish into a
+    menu that installed something else.  The wizard itself stays
+    for the zero-flags flow, where the user is genuinely choosing
+    a family.  scope passes straight through, so interactive local
+    warn-skips non-Claude agents like headless --scope local."""
+    if (scope == "project" and "claude-code" in requested
+            and pre_variant is None):
+        pre_variant = _tui_pick_variant(reader, None, project_dir)
+        if pre_variant is None:
+            return _BACK
+    targets, notes = build_install_plan(
+        requested, scope, pre_variant or "rules",
+        args.claude_mode or "rules", project_dir)
+    for nt in notes:
+        print(nt)
+    if not targets:
+        print("nothing to install")
+        return 0
+    _preview_targets(targets)
+    print()
+    if not _confirm(reader, args.yes):
+        print("aborted; nothing written")
+        return 0
+    results = execute_targets(targets, source, args.block_id, project_dir)
+    _summary_after_install(results, targets, project_dir, args.block_id)
+    for r in results:
+        if r["error"]:
+            return 4
+    return 0
+
+
+def _tui_project(args, reader, source, pre_variant, scope="project"):
     project_dir = _project_dir_of(args)
     print()
     print("Project directory: %s" % project_dir)
     requested = _parse_requested_agents(args)
+    if not _validate_agents(requested):
+        return 2
+    if scope == "local":
+        # local is claude-only in the headless run; interactive gets
+        # the same plan (non-claude agents warn-skipped, variant
+        # forced to CLAUDE.local.md) - with no agent flags it
+        # defaults to claude-code so the zero-flags flow still
+        # has something to preview
+        return _tui_project_flagged(reader, source,
+                                    requested or ["claude-code"],
+                                    "local", project_dir, args, "local")
+    if requested:
+        return _tui_project_flagged(reader, source, requested, pre_variant,
+                                    project_dir, args, scope)
     fam_of = {}
     for a in requested:
         if a == "claude-code":
@@ -3075,6 +3130,9 @@ def _tui_flow(args, reader):
     pre_scope = None
     if args.scope in ("user", "project", "local"):
         pre_scope = args.scope
+    if pre_scope == "local" and args.claude_variant not in (None, "local"):
+        err("usage error: --scope local only supports --claude-variant local")
+        return 1
 
     def parse_scope(buf):
         a = buf.strip().lower()
@@ -3123,7 +3181,8 @@ def _tui_flow(args, reader):
         else:
             pre_variant = ("local" if pre_scope == "local"
                            else args.claude_variant)
-            r = _tui_project(args, reader, source, pre_variant)
+            proj_scope = "local" if pre_scope == "local" else "project"
+            r = _tui_project(args, reader, source, pre_variant, proj_scope)
         if r is _BACK:
             # Esc walked all the way back: re-ask the scope menu (the
             # wizard start), never a swap to the numbered prompt
