@@ -123,7 +123,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
 
     r2 = run(["--remove", "--project-dir", str(proj), "--yes"], env=env)
     assert r2.returncode == 0, r2.stdout + r2.stderr
-    assert "codex,opencode,pi,omp,devin,cursor" in r2.stdout
+    assert "codex,opencode,devin,cursor,pi,omp" in r2.stdout
     assert not (proj / "AGENTS.md").exists()
 
     run(["--agent", "codex,opencode,pi,devin", "--scope", "project",
@@ -133,7 +133,7 @@ def test_11_shared_block_reports_family(run, env_for, fake_home, proj,
              env=env)
     payload = json.loads(r3.stdout)
     agents = [t["agent"] for t in payload["targets"]]
-    agents_list = "codex,opencode,pi,omp,devin,cursor,roo,augment,kilo," \
+    agents_list = "codex,opencode,devin,cursor,pi,omp,roo,augment,kilo," \
                   "droid,deepagents,cline,crush,amp,goose,zed,openhands," \
                   "warp,junie,posit-assistant,zcode," \
                   "kimi-code-cli,qwen-code,antigravity,kiro-cli,qoder," \

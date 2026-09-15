@@ -29,7 +29,7 @@ def test_smoke_full_cycle(run, env_for, tmp_path, src_file, git_available):
     assert r3.returncode == 0, r3.stdout + r3.stderr
     # cursor joined the family: one shared AGENTS.md target whose agent
     # field lists the whole family (no .cursor/rules drop anymore)
-    assert "codex,opencode,pi,omp,devin,cursor" in r3.stdout
+    assert "codex,opencode,devin,cursor,pi,omp" in r3.stdout
 
     f_rules = repo / ".claude" / "rules" / "behave.md"
     f_agents = repo / "AGENTS.md"

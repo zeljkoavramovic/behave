@@ -89,98 +89,97 @@ DROP_CONSENT = (
 #   "a" %APPDATA%
 #   "f" $FLATPAK_XDG_CONFIG_HOME
 #   "p" absolute path (as-is)
-# flags: "deprecated" (report-only deprecation notice)
 AGENTS: List[Dict[str, Any]] = [
-    {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")], "tier": 1, "flags": ()},
-    {"id": "amp", "env": None, "markers": [("x", "amp")], "tier": 1, "flags": ()},
-    {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")], "tier": 1, "flags": ()},
-    {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")], "tier": 1, "flags": ()},
-    {"id": "augment", "env": None, "markers": [("h", ".augment")], "tier": 1, "flags": ()},
-    {"id": "bob", "env": None, "markers": [("h", ".bob")], "tier": 1, "flags": ()},
-    {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")], "tier": 1, "flags": ()},
-    {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")], "tier": 1, "flags": ()},
-    {"id": "cline", "env": None, "markers": [("h", ".cline")], "tier": 1, "flags": ()},
+    {"id": "aider-desk", "env": None, "markers": [("h", ".aider-desk")]},
+    {"id": "amp", "env": None, "markers": [("x", "amp")]},
+    {"id": "antigravity", "env": None, "markers": [("h", ".gemini/antigravity")]},
+    {"id": "antigravity-cli", "env": None, "markers": [("h", ".gemini/antigravity-cli")]},
+    {"id": "augment", "env": None, "markers": [("h", ".augment")]},
+    {"id": "bob", "env": None, "markers": [("h", ".bob")]},
+    {"id": "claude-code", "env": "CLAUDE_CONFIG_DIR", "markers": [("h", ".claude")]},
+    {"id": "openclaw", "env": None, "markers": [("h", ".openclaw"), ("h", ".clawdbot"), ("h", ".moltbot")]},
+    {"id": "cline", "env": None, "markers": [("h", ".cline")]},
     # codebuff: the CLI writes ~/.config/manicode (legacy vendor name;
     # rebranding traces codebuff -> freebuff in the source);
     # FREEBUFF_CONFIG_DIR exists but the plain path is used, and
     # ~/.codebuff is NOT written - x-marker like opencode/crush.
-    {"id": "codebuff", "env": None, "markers": [("x", "manicode")], "tier": 1, "flags": ()},
-    {"id": "codewhale", "env": "CODEWHALE_HOME", "markers": [("h", ".codewhale")], "tier": 1, "flags": ()},
-    {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")], "tier": 1, "flags": ()},
-    {"id": "command-code", "env": None, "markers": [("h", ".commandcode")], "tier": 1, "flags": ()},
-    {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")], "tier": 1, "flags": ()},
-    {"id": "crush", "env": None, "markers": [("h", ".config/crush")], "tier": 1, "flags": ()},
-    {"id": "cursor", "env": None, "markers": [("h", ".cursor")], "tier": 1, "flags": ()},
-    {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")], "tier": 1, "flags": ()},
+    {"id": "codebuff", "env": None, "markers": [("x", "manicode")]},
+    {"id": "codewhale", "env": "CODEWHALE_HOME", "markers": [("h", ".codewhale")]},
+    {"id": "codex", "env": "CODEX_HOME", "markers": [("h", ".codex"), ("p", "/etc/codex")]},
+    {"id": "command-code", "env": None, "markers": [("h", ".commandcode")]},
+    {"id": "cortex", "env": None, "markers": [("h", ".snowflake/cortex")]},
+    {"id": "crush", "env": None, "markers": [("h", ".config/crush")]},
+    {"id": "cursor", "env": None, "markers": [("h", ".cursor")]},
+    {"id": "deepagents", "env": None, "markers": [("h", ".deepagents")]},
     # deepseek-harness: home = $DSH_HOME || ~/.dsh (home-paths
     # DSH_HOME_DIR_NAME; homedir()/.dsh everywhere, no APPDATA variant);
     # DSH_HOME is registered as a detection override only - install
     # uses the plain path (reasonix/qwen-code precedent).
-    {"id": "deepseek-harness", "env": "DSH_HOME", "markers": [("h", ".dsh")], "tier": 1, "flags": ()},
-    {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")], "tier": 1, "flags": ()},
-    {"id": "droid", "env": None, "markers": [("h", ".factory")], "tier": 1, "flags": ()},
+    {"id": "deepseek-harness", "env": "DSH_HOME", "markers": [("h", ".dsh")]},
+    {"id": "devin", "env": None, "markers": [("x", "devin"), ("a", "devin")]},
+    {"id": "droid", "env": None, "markers": [("h", ".factory")]},
     # forgecode: FORGE_CONFIG override exists but detection/install use
     # the plain ~/.forge path; the legacy ~/forge dir is presence-only,
     # not a marker.
-    {"id": "forgecode", "env": None, "markers": [("h", ".forge")], "tier": 1, "flags": ()},
-    {"id": "gemini-cli", "env": None, "markers": [("h", ".gemini")], "tier": 1, "flags": ()},
-    {"id": "github-copilot", "env": None, "markers": [("h", ".copilot")], "tier": 1, "flags": ()},
+    {"id": "forgecode", "env": None, "markers": [("h", ".forge")]},
+    {"id": "gemini-cli", "env": None, "markers": [("h", ".gemini")]},
+    {"id": "github-copilot", "env": None, "markers": [("h", ".copilot")]},
     # goose: the ("a", "Block/goose") marker matches the install target -
     # Windows detection missed goose while it was XDG-only (goose stores
     # config under %APPDATA%\Block\goose there, not under ~/.config).
-    {"id": "goose", "env": None, "markers": [("x", "goose"), ("a", "Block/goose")], "tier": 1, "flags": ()},
-    {"id": "grok", "env": "GROK_HOME", "markers": [("h", ".grok")], "tier": 1, "flags": ()},
+    {"id": "goose", "env": None, "markers": [("x", "goose"), ("a", "Block/goose")]},
+    {"id": "grok", "env": "GROK_HOME", "markers": [("h", ".grok")]},
     # hermes-agent: HERMES_HOME override exists but detection/install
     # use the plain ~/.hermes path (qwen-code precedent); the Windows
     # native default is %LOCALAPPDATA%\hermes - marker stays ~/.hermes.
-    {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")], "tier": 1, "flags": ()},
-    {"id": "jcode", "env": "JCODE_HOME", "markers": [("h", ".jcode")], "tier": 1, "flags": ()},
-    {"id": "junie", "env": None, "markers": [("h", ".junie")], "tier": 1, "flags": ()},
-    {"id": "kilo", "env": None, "markers": [("h", ".kilocode")], "tier": 1, "flags": ()},
+    {"id": "hermes-agent", "env": "HERMES_HOME", "markers": [("h", ".hermes")]},
+    {"id": "jcode", "env": "JCODE_HOME", "markers": [("h", ".jcode")]},
+    {"id": "junie", "env": None, "markers": [("h", ".junie")]},
+    {"id": "kilo", "env": None, "markers": [("h", ".kilocode")]},
     # kimchi: entry.ts hardcodes homedir()/.config/kimchi/harness and
     # force-sets its env vars (KIMCHI_CODING_AGENT_DIR etc. - overrides
     # are clobbered), so no env is registered; the plain home path is
     # the only real target (amp .config precedent - home_base(), not
     # XDG; %USERPROFILE%\.config\kimchi on Windows, no APPDATA).
-    {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")], "tier": 1, "flags": ()},
-    {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")], "tier": 1, "flags": ()},
-    {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")], "tier": 1, "flags": ()},
-    {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")], "tier": 1, "flags": ()},
+    {"id": "kimchi", "env": None, "markers": [("h", ".config/kimchi")]},
+    {"id": "kimi-code-cli", "env": None, "markers": [("h", ".kimi-code"), ("h", ".kimi")]},
+    {"id": "kiro-cli", "env": None, "markers": [("h", ".kiro")]},
+    {"id": "mistral-vibe", "env": "VIBE_HOME", "markers": [("h", ".vibe")]},
     # xum: the vendor (Coder) renamed cmux -> mux -> xum (shux pending);
     # the npm "mux" package is a forwarding shim. xum auto-migrates
     # ~/.mux to ~/.xum on startup - legacy marker kept as secondary
     # detection.
-    {"id": "xum", "env": None, "markers": [("h", ".xum"), ("h", ".mux")], "tier": 1, "flags": ()},
-    {"id": "omp", "env": None, "markers": [("h", ".omp/agent")], "tier": 1, "flags": ()},
-    {"id": "opencode", "env": None, "markers": [("x", "opencode")], "tier": 1, "flags": ()},
-    {"id": "openhands", "env": None, "markers": [("h", ".openhands")], "tier": 1, "flags": ()},
-    {"id": "pi", "env": None, "markers": [("h", ".pi/agent")], "tier": 1, "flags": ()},
-    {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")], "tier": 1, "flags": ()},
-    {"id": "qoder", "env": None, "markers": [("h", ".qoder")], "tier": 1, "flags": ()},
+    {"id": "xum", "env": None, "markers": [("h", ".xum"), ("h", ".mux")]},
+    {"id": "omp", "env": None, "markers": [("h", ".omp/agent")]},
+    {"id": "opencode", "env": None, "markers": [("x", "opencode")]},
+    {"id": "openhands", "env": None, "markers": [("h", ".openhands")]},
+    {"id": "pi", "env": None, "markers": [("h", ".pi/agent")]},
+    {"id": "posit-assistant", "env": None, "markers": [("h", ".posit/assistant"), ("h", ".positai")]},
+    {"id": "qoder", "env": None, "markers": [("h", ".qoder")]},
     # qoder-cn: QODERCN_CONFIG_DIR override exists but detection/install
     # use the plain ~/.qoder-cn path.
-    {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")], "tier": 1, "flags": ()},
-    {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")], "tier": 1, "flags": ()},
+    {"id": "qoder-cn", "env": None, "markers": [("h", ".qoder-cn")]},
+    {"id": "qwen-code", "env": None, "markers": [("h", ".qwen")]},
     # reasonix: home = REASONIX_HOME env (detection override only) ||
     # REASONIX_STATE_HOME || ~/.reasonix (Unix, literal homedir) /
     # %APPDATA%\reasonix (Windows) - the APPDATA marker fixes Windows
     # detection (devin/goose "a" marker precedent); install uses the
     # plain platform path, never the env (qwen-code precedent).
-    {"id": "reasonix", "env": "REASONIX_HOME", "markers": [("a", "reasonix"), ("h", ".reasonix")], "tier": 1, "flags": ()},
-    {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")], "tier": 1, "flags": ()},
-    {"id": "roo", "env": None, "markers": [("h", ".roo")], "tier": 1, "flags": ()},
-    {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")], "tier": 1, "flags": ()},
-    {"id": "trae", "env": None, "markers": [("h", ".trae")], "tier": 1, "flags": ()},
-    {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")], "tier": 1, "flags": ()},
-    {"id": "warp", "env": None, "markers": [("h", ".warp")], "tier": 1, "flags": ()},
-    {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")], "tier": 1, "flags": ()},
-    {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")], "tier": 1, "flags": ()},
+    {"id": "reasonix", "env": "REASONIX_HOME", "markers": [("a", "reasonix"), ("h", ".reasonix")]},
+    {"id": "rovodev", "env": None, "markers": [("h", ".rovodev")]},
+    {"id": "roo", "env": None, "markers": [("h", ".roo")]},
+    {"id": "tabnine-cli", "env": None, "markers": [("h", ".tabnine")]},
+    {"id": "trae", "env": None, "markers": [("h", ".trae")]},
+    {"id": "trae-cn", "env": None, "markers": [("h", ".trae-cn")]},
+    {"id": "warp", "env": None, "markers": [("h", ".warp")]},
+    {"id": "zed", "env": None, "markers": [("x", "zed"), ("a", "Zed"), ("f", "zed")]},
+    {"id": "zcode", "env": None, "markers": [("h", ".zcode"), ("p", "/Applications/ZCode.app")]},
     # pochi: user-global rules = ~/.pochi/README.pochi.md ONLY (the
     # single fixed GlobalRules path, default-on every session;
     # AGENTS.md is NOT loaded at user level); at project level BOTH
     # README.pochi.md and AGENTS.md at cwd load - install writes only
     # the family AGENTS.md, never a project README.pochi.md.
-    {"id": "pochi", "env": None, "markers": [("h", ".pochi")], "tier": 1, "flags": ()},
+    {"id": "pochi", "env": None, "markers": [("h", ".pochi")]},
 ]
 
 AGENT_BY_ID = dict((a["id"], a) for a in AGENTS)
@@ -214,20 +213,19 @@ TIER1_ORDER = [
     "pochi",
     "reasonix",
     "deepseek-harness",
-]
-TIER1_SET = set(TIER1_ORDER)
+    ]
 # Every family member reads project-root AGENTS.md by default; project
-# scope installs ONE shared ./AGENTS.md block for all of them.
-FAMILY_IDS = ["codex", "opencode", "pi", "omp", "devin", "cursor",
-              "roo", "augment", "kilo", "droid", "deepagents", "cline",
-              "crush", "amp", "goose", "zed", "openhands", "warp",
-              "junie", "posit-assistant", "zcode",
-              "kimi-code-cli", "qwen-code", "antigravity", "kiro-cli",
-              "qoder", "grok", "mistral-vibe", "rovodev", "bob",
-              "cortex", "antigravity-cli", "xum", "hermes-agent",
-              "aider-desk", "forgecode", "command-code", "qoder-cn",
-              "codewhale", "jcode", "codebuff", "kimchi", "pochi",
-              "reasonix", "deepseek-harness"]
+# scope installs ONE shared ./AGENTS.md block for all of them. Derived
+# from TIER1_ORDER so a new agent joins the family by joining the roster
+# (a parallel literal list went stale before: omp was missing from it).
+#
+# NOT family members (own project file or user-scope-only):
+#   claude-code, github-copilot, tabnine-cli, trae/trae-cn -> own file
+#   gemini-cli -> GEMINI.md only; openclaw -> never reads project
+#   AGENTS.md (personal workspace model)
+_NON_FAMILY = {"claude-code", "gemini-cli", "github-copilot", "openclaw",
+               "tabnine-cli", "trae", "trae-cn"}
+FAMILY_IDS = [a for a in TIER1_ORDER if a not in _NON_FAMILY]
 DISPLAY = {
     "claude-code": "Claude Code",
     "codex": "Codex",
@@ -385,6 +383,17 @@ def codex_dir():
     return _env_dir("CODEX_HOME", ".codex")
 
 
+def _existing_dirs(cands):
+    """Multi-marker rule (section 6): every existing dir from cands
+    (deduped, order preserved), else the first candidate alone."""
+    seen = []
+    for d in cands:
+        if d not in seen:
+            seen.append(d)
+    existing = [d for d in seen if d.is_dir()]
+    return existing or [seen[0]]
+
+
 def devin_dirs():
     """User-scope Devin dirs: every existing marker dir, else platform default.
 
@@ -401,14 +410,7 @@ def devin_dirs():
         cands.append(xdg_base() / "devin")
         if appd is not None:
             cands.append(appd / "devin")
-    seen = []
-    for d in cands:
-        if d not in seen:
-            seen.append(d)
-    existing = [d for d in seen if d.is_dir()]
-    if existing:
-        return existing
-    return [seen[0]]
+    return _existing_dirs(cands)
 
 
 def goose_config_dir():
@@ -459,14 +461,7 @@ def zed_dirs():
             cands.append(appd / "Zed")
     if flat is not None:
         cands.append(flat / "zed")
-    seen = []
-    for d in cands:
-        if d not in seen:
-            seen.append(d)
-    existing = [d for d in seen if d.is_dir()]
-    if existing:
-        return existing
-    return [seen[0]]
+    return _existing_dirs(cands)
 
 
 # ---------------------------------------------------------------------------
@@ -475,7 +470,7 @@ def zed_dirs():
 
 
 def detect_agents():
-    """Returns a list of dicts: id, tier, flags, paths."""
+    """Returns a list of dicts: id, paths."""
     home = home_base()
     xdg = xdg_base()
     appd = appdata_base()
@@ -513,8 +508,6 @@ def detect_agents():
         if matched:
             results.append({
                 "id": ag["id"],
-                "tier": ag["tier"],
-                "flags": ag["flags"],
                 "paths": matched,
             })
     return results
@@ -843,9 +836,353 @@ def claude_project_target(variant, project_dir):
     return project_dir / ".claude" / "rules" / "behave.md", "drop"
 
 
-def build_install_plan(agents, scope, variant, claude_mode, project_dir,
-                       block_id):
-    """Returns (targets, notes). agents: tier-1 ids only."""
+# User-scope install targets (INSTALLER-PLAN sections 4/6). ONE
+# source for BOTH consumers - build_install_plan (install) and
+# scan_removal (uninstall candidates) - so install and removal can
+# never drift apart. Each row: id -> list of
+# (path, mode, drop_agent, agents served); multi-marker agents
+# (devin, zed) expand to every existing dir at call time.
+# claude-code is NOT here: its user target depends on --claude-mode,
+# so it keeps an explicit branch in build_install_plan and scan
+# lists both of its files. Rows follow TIER1_ORDER.
+_USER_TARGETS: Dict[str, Any] = {
+    "codex": lambda: [(codex_dir() / "AGENTS.md", "inline", None, ["codex"])],
+    "opencode": lambda: [(xdg_base() / "opencode" / "AGENTS.md", "inline", None, ["opencode"])],
+    "pi": lambda: [(home_base() / ".pi" / "agent" / "AGENTS.md", "inline", None, ["pi"])],
+    "omp": lambda: [(home_base() / ".omp" / "agent" / "AGENTS.md", "inline", None, ["omp"])],
+    "devin": lambda: [(d / "AGENTS.md", "inline", None, ["devin"])
+             for d in devin_dirs()],
+    "cursor": lambda: [(home_base() / ".cursor" / "rules" / "behave.mdc", "drop", "cursor", ["cursor"])],
+    "gemini-cli": lambda: [(home_base() / ".gemini" / "GEMINI.md", "inline", None, ["gemini-cli"])],
+    "github-copilot": lambda: [(home_base() / ".copilot" / "instructions" / "behave.instructions.md", "drop", "github-copilot", ["github-copilot"])],
+    "roo": lambda: [(home_base() / ".roo" / "rules" / "behave.md", "drop", "roo", ["roo"])],
+    "augment": lambda: [(home_base() / ".augment" / "rules" / "behave.md", "drop", "augment", ["augment"])],
+    "kilo": lambda: [(home_base() / ".kilocode" / "rules" / "behave.md", "drop", "kilo", ["kilo"])],
+    "droid": lambda: [(home_base() / ".factory" / "AGENTS.md", "inline", None, ["droid"])],
+    "deepagents": lambda: [(home_base() / ".deepagents" / "agent" / "AGENTS.md", "inline", None, ["deepagents"])],
+    # cline's SDK loader reads ~/.cline/rules among its global
+    # rules search paths; chosen over Documents/Cline/Rules
+    # because it matches the ~/.cline detection marker and
+    # needs no Documents-dir resolver.
+    "cline": lambda: [(home_base() / ".cline" / "rules" / "behave.md", "drop", "cline", ["cline"])],
+    # CRUSH.md is the user's own cross-project instructions
+    # file (like GEMINI.md): inline block at the top so
+    # existing content survives - never a whole-file drop.
+    # crush loads <config>/crush/CRUSH.md by default, where
+    # config = $XDG_CONFIG_HOME or ~/.config on ALL platforms.
+    "crush": lambda: [(xdg_base() / "crush" / "CRUSH.md", "inline", None, ["crush"])],
+    # amp hardcodes $HOME/.config on every platform
+    # (including Windows) and does not honor
+    # XDG_CONFIG_HOME, so home_base()/".config" - NOT
+    # xdg_base().
+    "amp": lambda: [(home_base() / ".config" / "amp" / "AGENTS.md", "inline", None, ["amp"])],
+    "goose": lambda: [(goose_config_dir() / "AGENTS.md", "inline", None, ["goose"])],
+    "zed": lambda: [(d / "AGENTS.md", "inline", None, ["zed"])
+             for d in zed_dirs()],
+    # OpenHands CLI hardwires load_user_skills=True and
+    # always loads trigger-less .md files from
+    # ~/.agents/skills/ (the modern dir; legacy
+    # ~/.openhands/{skills,microagents}/ also read - marker
+    # ~/.openhands stays detection-only).
+    "openhands": lambda: [(home_base() / ".agents" / "skills" / "behave.md", "drop", "openhands", ["openhands"])],
+    # ~/.agents/AGENTS.md is warp's ONLY registered global
+    # rulefile (docs.warp.dev + warp source
+    # GlobalRuleSource::Agents) AND a de-facto shared
+    # cross-agent file (cline, droid, goose, kimi-code read
+    # it too) - the marked block is idempotent, so it serves
+    # every reader.
+    "warp": lambda: [(home_base() / ".agents" / "AGENTS.md", "inline", None, ["warp"])],
+    # documented for Junie CLI (%USERPROFILE%\.junie\AGENTS.md);
+    # the IDE plugin loads project scope only - caveat
+    # documented in TODO-LEFT findings. Project scope rides
+    # the shared ./AGENTS.md family block, NOT
+    # .junie/AGENTS.md: that file is EXCLUSIVE and would
+    # suppress the root AGENTS.md + playbook + rules.
+    "junie": lambda: [(home_base() / ".junie" / "AGENTS.md", "inline", None, ["junie"])],
+    # Posit Assistant reads ~/.posit/assistant/AGENTS.md as
+    # user memory (every session, no trust prompt); legacy
+    # ~/.positai is auto-migrated by the app on first
+    # launch, so the ~/.posit marker suffices - the legacy
+    # dir is never a second install target.
+    "posit-assistant": lambda: [(home_base() / ".posit" / "assistant" / "AGENTS.md", "inline", None, ["posit-assistant"])],
+    # zcode reads ~/.zcode/AGENTS.md at task start (appended
+    # first into the prompt); the /Applications/ZCode.app
+    # registry marker is presence-only detection (the app
+    # bundle loads no rules file) - ~/.zcode is the single
+    # user target.
+    "zcode": lambda: [(home_base() / ".zcode" / "AGENTS.md", "inline", None, ["zcode"])],
+    # OpenClaw runs a personal workspace model - it loads
+    # ~/.openclaw/workspace/AGENTS.md (workspace bootstrap,
+    # injected every session) but does NOT read project
+    # ./AGENTS.md, so openclaw is intentionally NOT in
+    # FAMILY_IDS; legacy ~/.clawdbot / ~/.moltbot are
+    # inert after migration - detection-only markers.
+    "openclaw": lambda: [(home_base() / ".openclaw" / "workspace" / "AGENTS.md", "inline", None, ["openclaw"])],
+    # ~/.kimi-code/AGENTS.md is kimi-code's documented
+    # global memory (loadAgentsMdForRoots, default-on);
+    # the ~/.kimi marker detects the OLD Python Kimi CLI -
+    # a different tool that loads no user rules file - and
+    # stays detection-only.
+    "kimi-code-cli": lambda: [(home_base() / ".kimi-code" / "AGENTS.md", "inline", None, ["kimi-code-cli"])],
+    # qwen-code loads ~/.qwen/QWEN.md every conversation
+    # (memoryDiscovery.ts: the global context file is
+    # always checked, created by the user or /memory).
+    # QWEN_HOME env override exists but detection/install
+    # use the plain home path. Project scope rides the
+    # shared ./AGENTS.md family block (AGENTS.md is in
+    # the default context filename list).
+    "qwen-code": lambda: [(home_base() / ".qwen" / "QWEN.md", "inline", None, ["qwen-code"])],
+    # ~/.trae/user_rules.md is the Trae IDE's global rules
+    # file (docs.trae.ai/ide/rules: "Global rules take
+    # effect in all projects"; the IDE Rules UI creates
+    # this exact file) - inline at the top so existing
+    # user rules survive. Windows: %userprofile%/.trae.
+    "trae": lambda: [(home_base() / ".trae" / "user_rules.md", "inline", None, ["trae"])],
+    # antigravity reads the SAME global file as gemini-cli
+    # ("Global rules live in ~/.gemini/GEMINI.md and are
+    # applied across all workspaces" - antigravity.google
+    # /docs/ide/rules + /docs/rules-workflows). Shared-file
+    # case, warp ~/.agents/AGENTS.md precedent: the marked
+    # block is idempotent, so selecting both agents writes
+    # one block; --remove cleans it for both (the removal
+    # candidate lists gemini-cli AND antigravity).
+    "antigravity": lambda: [(home_base() / ".gemini" / "GEMINI.md", "inline", None, ["antigravity"])],
+    # ~/.kiro/steering/ is Kiro's global steering dir -
+    # "Kiro will automatically load these files in chat
+    # sessions" (kiro.dev/docs/steering); on the CLI,
+    # inclusion modes are not supported at all, and on the
+    # IDE the default inclusion is always, so a bare drop
+    # file needs no frontmatter. Global steering applies
+    # to IDE + CLI only (not Web/Mobile). Project scope
+    # rides the shared ./AGENTS.md family block (root
+    # AGENTS.md is "always included", all surfaces).
+    "kiro-cli": lambda: [(home_base() / ".kiro" / "steering" / "behave.md", "drop", "kiro-cli", ["kiro-cli"])],
+    # User-level rules at ~/.qoder/rules/ apply to every
+    # project and "when no loading-related frontmatter is
+    # configured, rules are always active by default"
+    # (docs.qoder.com/cli/memory - documented, unlike the
+    # qwen-code equivalent). ~/.qoder/AGENTS.md is the
+    # other user surface; the drop file keeps behave in
+    # its own file. Project scope rides the shared
+    # ./AGENTS.md family block ("AGENTS.md is the default
+    # context file name", loaded at session start inside
+    # a trusted workspace).
+    "qoder": lambda: [(home_base() / ".qoder" / "rules" / "behave.md", "drop", "qoder", ["qoder"])],
+    # Grok Build (xAI, binary `grok`) scans $GROK_HOME (or
+    # ~/.grok) unconditionally: named files + rules/*.md
+    # at the home root, no off switch (agents_md.rs
+    # L187-302; docs.x.ai/build/features/project-rules).
+    # rules/*.md bodies are frontmatter-stripped, so a
+    # bare drop works. Project scope rides the shared
+    # ./AGENTS.md family block (repo-root-to-cwd chain,
+    # deeper files win). CAVEAT: the third-party
+    # superagent-ai/grok-cli also writes ~/.grok (no
+    # GROK_HOME) - the marker can false-positive; GROK_HOME
+    # is the disambiguator (kept, marker/target divergence
+    # precedent).
+    "grok": lambda: [(home_base() / ".grok" / "rules" / "behave.md", "drop", "grok", ["grok"])],
+    # Mistral Vibe loads up to two AGENTS.md files into
+    # context: the user-level ~/.vibe/AGENTS.md (or in
+    # $VIBE_HOME if set) and the first project AGENTS.md
+    # walking up from cwd, trusted folders only
+    # (docs.mistral.ai/vibe/code/cli/agents; OSS repo
+    # mistralai/mistral-vibe). VIBE_HOME exists but
+    # detection/install use the plain home path (qwen-code
+    # precedent). Project scope rides the shared
+    # ./AGENTS.md family block.
+    "mistral-vibe": lambda: [(home_base() / ".vibe" / "AGENTS.md", "inline", None, ["mistral-vibe"])],
+    # Rovo Dev CLI memory: user-wide ~/.rovodev/AGENTS.md
+    # ("applies to all your Rovo Dev CLI sessions") plus
+    # project AGENTS.md + AGENTS.local.md per workspace
+    # (support.atlassian.com/rovo/docs/
+    # use-memory-in-rovo-dev-cli). Project scope rides the
+    # shared ./AGENTS.md family block.
+    "rovodev": lambda: [(home_base() / ".rovodev" / "AGENTS.md", "inline", None, ["rovodev"])],
+    # IBM Bob rules: user-global ~/.bob/rules/*.md "Apply
+    # automatically across all your projects" (plain text
+    # files, recursive + alphabetical; no frontmatter
+    # activation system documented - bare drop,
+    # kiro-cli/qoder/grok precedent). Project scope rides
+    # the shared ./AGENTS.md family block (root AGENTS.md
+    # "Automatically loaded by default", opt-out only via
+    # "bob-code.useAgentRules": false).
+    "bob": lambda: [(home_base() / ".bob" / "rules" / "behave.md", "drop", "bob", ["bob"])],
+    # Trae CN (docs.trae.cn/work_rules, TraeWork docs):
+    # global rules live under ~/.trae-cn/user_rules/ - the
+    # CN docs word it as a rules DIRECTORY (win
+    # %userprofile%/.trae-cn/user_rules), unlike the intl
+    # edition's single user_rules.md file; drop with
+    # alwaysApply like the project rules. Root AGENTS.md is
+    # toggle-gated + TraeWork-desktop-only -> NOT a family
+    # agent (intl precedent).
+    "trae-cn": lambda: [(home_base() / ".trae-cn" / "user_rules" / "behave.md", "drop", "trae-cn", ["trae-cn"])],
+    # Snowflake Cortex Code (CoCo): user-scope instruction
+    # files are searched in ~/.snowflake/cortex/ (primary;
+    # the Custom instructions editor reads/writes
+    # ~/.snowflake/cortex/AGENTS.md) - Desktop-documented;
+    # the CLI documents project AGENTS.md but is silent on
+    # user instruction files (TODO-LEFT findings caveat).
+    # Project scope rides the shared ./AGENTS.md family
+    # block (root AGENTS.md auto-discovered workspace root
+    # -> git root, default on).
+    "cortex": lambda: [(home_base() / ".snowflake" / "cortex" / "AGENTS.md", "inline", None, ["cortex"])],
+    # Antigravity CLI (the Gemini CLI successor) keeps the
+    # same context-file rules: "The agent automatically
+    # consults and enforces your global constraints
+    # located at ~/.gemini/GEMINI.md" and parses workspace
+    # GEMINI.md + AGENTS.md (/docs/cli/gcli-migration,
+    # "Context files and workspace rules"). Third
+    # shared-file reader with gemini-cli + antigravity;
+    # the marked block is idempotent and the removal
+    # candidate lists all three. Project scope rides the
+    # shared ./AGENTS.md family block.
+    "antigravity-cli": lambda: [(home_base() / ".gemini" / "GEMINI.md", "inline", None, ["antigravity-cli"])],
+    # xum (Coder; renamed cmux -> mux -> xum) reads
+    # ~/.xum/AGENTS.md as its user instructions file; a
+    # pre-existing file keeps its content below the marked
+    # block (amp/droid precedent). Legacy ~/.mux is
+    # auto-migrated by xum itself - detection-only marker.
+    # Project scope rides the shared ./AGENTS.md family
+    # block (first-match chain from cwd).
+    "xum": lambda: [(home_base() / ".xum" / "AGENTS.md", "inline", None, ["xum"])],
+    # Hermes Agent (Nous Research): ~/.hermes/SOUL.md is the
+    # identity file loaded every session - inline block at
+    # the top so existing content survives (create if
+    # absent). HERMES_HOME exists but install uses the
+    # plain path (qwen-code precedent); Windows native
+    # default is %LOCALAPPDATA%\hermes - marker stays
+    # ~/.hermes. Project scope rides the shared ./AGENTS.md
+    # family block (AGENTS.md is in its project chain).
+    "hermes-agent": lambda: [(home_base() / ".hermes" / "SOUL.md", "inline", None, ["hermes-agent"])],
+    # AiderDesk (hotovo): user rules at ~/.aider-desk/rules/
+    # are always active - no frontmatter system documented,
+    # bare drop (kiro-cli/qoder/grok/bob precedent). Agent
+    # mode auto-loads the root AGENTS.md, so project scope
+    # rides the shared ./AGENTS.md family block.
+    "aider-desk": lambda: [(home_base() / ".aider-desk" / "rules" / "behave.md", "drop", "aider-desk", ["aider-desk"])],
+    # ForgeCode (Tailcall): ~/.forge/AGENTS.md is the global
+    # instructions file - inline block at the top so
+    # existing content survives. FORGE_CONFIG exists but
+    # install uses the plain path; legacy ~/forge is
+    # presence-only, not a marker. Project scope rides the
+    # shared ./AGENTS.md family block.
+    "forgecode": lambda: [(home_base() / ".forge" / "AGENTS.md", "inline", None, ["forgecode"])],
+    # Command Code (Langbase): ~/.commandcode/AGENTS.md is
+    # the global instructions file - inline block at the
+    # top so existing content survives. Project scope rides
+    # the shared ./AGENTS.md family block (<root>/AGENTS.md
+    # is the default project context file).
+    "command-code": lambda: [(home_base() / ".commandcode" / "AGENTS.md", "inline", None, ["command-code"])],
+    # Qoder CLI CN mirrors the intl qoder exactly: user
+    # rules at ~/.qoder-cn/rules/ are always active by
+    # default - bare drop, no frontmatter (qoder
+    # precedent). QODERCN_CONFIG_DIR exists but install
+    # uses the plain path. Project scope rides the shared
+    # ./AGENTS.md family block (the CN CLI reads project
+    # AGENTS.md).
+    "qoder-cn": lambda: [(home_base() / ".qoder-cn" / "rules" / "behave.md", "drop", "qoder-cn", ["qoder-cn"])],
+    # Tabnine CLI: ~/.tabnine/agent/TABNINE.md is the
+    # user-level instructions file (the agent/ dir is
+    # created if absent) - inline block at the top so
+    # existing content survives. Project scope writes its
+    # OWN ./TABNINE.md target, NOT the shared AGENTS.md
+    # family block - tabnine reads TABNINE.md, not
+    # AGENTS.md (gemini-cli GEMINI.md precedent).
+    "tabnine-cli": lambda: [(home_base() / ".tabnine" / "agent" / "TABNINE.md", "inline", None, ["tabnine-cli"])],
+    # Codewhale (Hmbown; Rust CLI) checks the global
+    # ~/.codewhale/AGENTS.md every session and merges it
+    # with the project one - global prepended, project gets
+    # the last word (source #1157) - so the marked block
+    # rides at the top (amp/droid precedent; file created
+    # if absent). Real $HOME path, NOT a
+    # CODEWHALE_HOME-redirected one. Aggregate 48 KiB
+    # instruction budget trims the broadest scope first -
+    # the block stays small by design. Project scope rides
+    # the shared ./AGENTS.md family block (AGENTS.md
+    # canonical, CLAUDE.md fallbacks).
+    "codewhale": lambda: [(home_base() / ".codewhale" / "AGENTS.md", "inline", None, ["codewhale"])],
+    # jcode (1jehuang; Rust harness): ~/.jcode/
+    # prompt-overlay.md is the jcode-scoped global - the
+    # "Global Prompt Overlay", prepended to every session.
+    # The bare ~/AGENTS.md is ALSO read globally but is
+    # skipped as a shared cross-agent surface - the
+    # overlay is chosen deliberately. JCODE_HOME exists
+    # but detection/install use the plain home path
+    # (qwen-code precedent). Project scope rides the
+    # shared ./AGENTS.md family block (the default
+    # chain).
+    "jcode": lambda: [(home_base() / ".jcode" / "prompt-overlay.md", "inline", None, ["jcode"])],
+    # Codebuff (npm CLI): user knowledge files are
+    # ~/.AGENTS.md > ~/.CLAUDE.md - first found only,
+    # case-insensitive, loaded every session (sdk
+    # run-state.ts loadUserKnowledgeFiles); ~/.knowledge.md
+    # left the priority list in current source despite the
+    # docs. BARE home dotfile - first of its kind, but the
+    # same inline-upsert mechanics: create ~/.AGENTS.md if
+    # absent, preserve existing content, marked block at
+    # the top. Project scope rides the shared ./AGENTS.md
+    # family block (root AGENTS.md/CLAUDE.md injected as
+    # "Project instructions").
+    "codebuff": lambda: [(home_base() / ".AGENTS.md", "inline", None, ["codebuff"])],
+    # Kimchi (CAST AI): the global context file
+    # ~/.config/kimchi/harness/AGENTS.md is loaded EVERY
+    # session, before project files (context-files.ts);
+    # entry.ts hardcodes homedir()/.config/kimchi/harness
+    # and force-sets its env vars, so overrides are
+    # clobbered - no env registered, plain home path only
+    # (amp precedent: home_base()/".config", NOT
+    # xdg_base(); %USERPROFILE%\.config\kimchi on Windows,
+    # no APPDATA). Project scope rides the shared
+    # ./AGENTS.md family block (AGENTS.md/CLAUDE.md walk
+    # cwd->root).
+    "kimchi": lambda: [(home_base() / ".config" / "kimchi" / "harness" / "AGENTS.md", "inline", None, ["kimchi"])],
+    # Pochi (TabbyML): ~/.pochi/README.pochi.md is the
+    # single fixed GlobalRules path, default-on every
+    # session, inline-merged, no truncation
+    # (custom-rules.ts L14-16; hermes-agent precedent of
+    # a non-AGENTS.md user file). AGENTS.md is NOT loaded
+    # at user level. Windows: %USERPROFILE%\.pochi.
+    # Project scope rides the shared ./AGENTS.md family
+    # block (BOTH README.pochi.md and AGENTS.md at cwd
+    # load; a project README.pochi.md is never written -
+    # junie .junie/AGENTS.md precedent).
+    "pochi": lambda: [(home_base() / ".pochi" / "README.pochi.md", "inline", None, ["pochi"])],
+    # Reasonix (DeepSeek; esengine/DeepSeek-Reasonix):
+    # <home>/REASONIX.md is the ScopeUser rules file,
+    # loaded unconditionally at every boot into the
+    # cache-stable system prefix (resolver.go L24/L121-132,
+    # boot.go L650-657); REASONIX.md is canonical over the
+    # also-accepted AGENTS.md/CLAUDE.md in the same dir -
+    # the agent's own DocPath prefers an existing
+    # REASONIX.md, so the block absorbs later agent
+    # appends. Home: %APPDATA%\reasonix on Windows,
+    # ~/.reasonix elsewhere (devin platform-split
+    # precedent); REASONIX_HOME/REASONIX_STATE_HOME
+    # overrides exist but the plain path is used
+    # (qwen-code precedent); edits apply next session
+    # (cache-stable). Project scope rides the shared
+    # ./AGENTS.md family block (REASONIX.md/AGENTS.md/
+    # CLAUDE.md + .local.md variants, git-root->cwd chain,
+    # ALL matches load).
+    "reasonix": lambda: [(reasonix_home() / "REASONIX.md", "inline", None, ["reasonix"])],
+    # DeepSeek Harness (DeepSeek AI; CLI dsh): ~/.dsh/AGENTS.md
+    # is the fixed user-global instruction file, loaded as
+    # baseline before the first request by the
+    # dsh-agent-instructions plugin - "dsh-base enables this
+    # behavior by default" (package README; config.ts
+    # dshHome "defaults to $DSH_HOME or ~/.dsh"). Byte
+    # budget trims the broadest scope first, so the block
+    # stays small (codewhale caveat precedent). DSH_HOME
+    # override exists but the plain path is used
+    # (qwen-code/reasonix precedent). Project scope rides
+    # the shared ./AGENTS.md family block (AGENTS.md +
+    # CLAUDE.md per dir + .local overlays, cwd->git-root
+    # walk, every existing file loads).
+    "deepseek-harness": lambda: [(home_base() / ".dsh" / "AGENTS.md", "inline", None, ["deepseek-harness"])],
+}
+
+def build_install_plan(agents, scope, variant, claude_mode, project_dir):
+    """Returns (targets, notes)."""
     targets = []
     notes = []
     if scope == "local":
@@ -874,497 +1211,10 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir,
                         ["claude-code"],
                         claude_dir() / "rules" / "behave.md", "drop",
                         drop_agent="claude-code"))
-            elif a == "codex":
-                targets.append(_mk_target(
-                    ["codex"], codex_dir() / "AGENTS.md", "inline"))
-            elif a == "opencode":
-                targets.append(_mk_target(
-                    ["opencode"], xdg_base() / "opencode" / "AGENTS.md",
-                    "inline"))
-            elif a == "pi":
-                targets.append(_mk_target(
-                    ["pi"], home_base() / ".pi" / "agent" / "AGENTS.md",
-                    "inline"))
-            elif a == "omp":
-                targets.append(_mk_target(
-                    ["omp"], home_base() / ".omp" / "agent" / "AGENTS.md",
-                    "inline"))
-            elif a == "devin":
-                for d in devin_dirs():
-                    targets.append(_mk_target(
-                        ["devin"], d / "AGENTS.md", "inline"))
-            elif a == "cursor":
-                targets.append(_mk_target(
-                    ["cursor"], home_base() / ".cursor" / "rules" / "behave.mdc",
-                    "drop", drop_agent="cursor"))
-            elif a == "gemini-cli":
-                targets.append(_mk_target(
-                    ["gemini-cli"], home_base() / ".gemini" / "GEMINI.md",
-                    "inline"))
-            elif a == "github-copilot":
-                targets.append(_mk_target(
-                    ["github-copilot"],
-                    home_base() / ".copilot" / "instructions" /
-                    "behave.instructions.md",
-                    "drop", drop_agent="github-copilot"))
-            elif a == "roo":
-                targets.append(_mk_target(
-                    ["roo"], home_base() / ".roo" / "rules" / "behave.md",
-                    "drop", drop_agent="roo"))
-            elif a == "augment":
-                targets.append(_mk_target(
-                    ["augment"], home_base() / ".augment" / "rules" /
-                    "behave.md", "drop", drop_agent="augment"))
-            elif a == "kilo":
-                targets.append(_mk_target(
-                    ["kilo"], home_base() / ".kilocode" / "rules" /
-                    "behave.md", "drop", drop_agent="kilo"))
-            elif a == "droid":
-                targets.append(_mk_target(
-                    ["droid"], home_base() / ".factory" / "AGENTS.md",
-                    "inline"))
-            elif a == "deepagents":
-                targets.append(_mk_target(
-                    ["deepagents"], home_base() / ".deepagents" / "agent" /
-                    "AGENTS.md", "inline"))
-            elif a == "cline":
-                # cline's SDK loader reads ~/.cline/rules among its global
-                # rules search paths; chosen over Documents/Cline/Rules
-                # because it matches the ~/.cline detection marker and
-                # needs no Documents-dir resolver.
-                targets.append(_mk_target(
-                    ["cline"], home_base() / ".cline" / "rules" /
-                    "behave.md", "drop", drop_agent="cline"))
-            elif a == "crush":
-                # CRUSH.md is the user's own cross-project instructions
-                # file (like GEMINI.md): inline block at the top so
-                # existing content survives - never a whole-file drop.
-                # crush loads <config>/crush/CRUSH.md by default, where
-                # config = $XDG_CONFIG_HOME or ~/.config on ALL platforms.
-                targets.append(_mk_target(
-                    ["crush"], xdg_base() / "crush" / "CRUSH.md",
-                    "inline"))
-            elif a == "amp":
-                # amp hardcodes $HOME/.config on every platform
-                # (including Windows) and does not honor
-                # XDG_CONFIG_HOME, so home_base()/".config" - NOT
-                # xdg_base().
-                targets.append(_mk_target(
-                    ["amp"], home_base() / ".config" / "amp" / "AGENTS.md",
-                    "inline"))
-            elif a == "goose":
-                targets.append(_mk_target(
-                    ["goose"], goose_config_dir() / "AGENTS.md",
-                    "inline"))
-            elif a == "zed":
-                for d in zed_dirs():
-                    targets.append(_mk_target(
-                        ["zed"], d / "AGENTS.md", "inline"))
-            elif a == "openhands":
-                # OpenHands CLI hardwires load_user_skills=True and
-                # always loads trigger-less .md files from
-                # ~/.agents/skills/ (the modern dir; legacy
-                # ~/.openhands/{skills,microagents}/ also read - marker
-                # ~/.openhands stays detection-only).
-                targets.append(_mk_target(
-                    ["openhands"], home_base() / ".agents" / "skills" /
-                    "behave.md", "drop", drop_agent="openhands"))
-            elif a == "warp":
-                # ~/.agents/AGENTS.md is warp's ONLY registered global
-                # rulefile (docs.warp.dev + warp source
-                # GlobalRuleSource::Agents) AND a de-facto shared
-                # cross-agent file (cline, droid, goose, kimi-code read
-                # it too) - the marked block is idempotent, so it serves
-                # every reader.
-                targets.append(_mk_target(
-                    ["warp"], home_base() / ".agents" / "AGENTS.md",
-                    "inline"))
-            elif a == "junie":
-                # documented for Junie CLI (%USERPROFILE%\.junie\AGENTS.md);
-                # the IDE plugin loads project scope only - caveat
-                # documented in TODO-LEFT findings. Project scope rides
-                # the shared ./AGENTS.md family block, NOT
-                # .junie/AGENTS.md: that file is EXCLUSIVE and would
-                # suppress the root AGENTS.md + playbook + rules.
-                targets.append(_mk_target(
-                    ["junie"], home_base() / ".junie" / "AGENTS.md",
-                    "inline"))
-            elif a == "posit-assistant":
-                # Posit Assistant reads ~/.posit/assistant/AGENTS.md as
-                # user memory (every session, no trust prompt); legacy
-                # ~/.positai is auto-migrated by the app on first
-                # launch, so the ~/.posit marker suffices - the legacy
-                # dir is never a second install target.
-                targets.append(_mk_target(
-                    ["posit-assistant"],
-                    home_base() / ".posit" / "assistant" / "AGENTS.md",
-                    "inline"))
-            elif a == "zcode":
-                # zcode reads ~/.zcode/AGENTS.md at task start (appended
-                # first into the prompt); the /Applications/ZCode.app
-                # registry marker is presence-only detection (the app
-                # bundle loads no rules file) - ~/.zcode is the single
-                # user target.
-                targets.append(_mk_target(
-                    ["zcode"], home_base() / ".zcode" / "AGENTS.md",
-                    "inline"))
-            elif a == "openclaw":
-                # OpenClaw runs a personal workspace model - it loads
-                # ~/.openclaw/workspace/AGENTS.md (workspace bootstrap,
-                # injected every session) but does NOT read project
-                # ./AGENTS.md, so openclaw is intentionally NOT in
-                # FAMILY_IDS; legacy ~/.clawdbot / ~/.moltbot are
-                # inert after migration - detection-only markers.
-                targets.append(_mk_target(
-                    ["openclaw"],
-                    home_base() / ".openclaw" / "workspace" / "AGENTS.md",
-                    "inline"))
-            elif a == "kimi-code-cli":
-                # ~/.kimi-code/AGENTS.md is kimi-code's documented
-                # global memory (loadAgentsMdForRoots, default-on);
-                # the ~/.kimi marker detects the OLD Python Kimi CLI -
-                # a different tool that loads no user rules file - and
-                # stays detection-only.
-                targets.append(_mk_target(
-                    ["kimi-code-cli"],
-                    home_base() / ".kimi-code" / "AGENTS.md",
-                    "inline"))
-            elif a == "qwen-code":
-                # qwen-code loads ~/.qwen/QWEN.md every conversation
-                # (memoryDiscovery.ts: the global context file is
-                # always checked, created by the user or /memory).
-                # QWEN_HOME env override exists but detection/install
-                # use the plain home path. Project scope rides the
-                # shared ./AGENTS.md family block (AGENTS.md is in
-                # the default context filename list).
-                targets.append(_mk_target(
-                    ["qwen-code"], home_base() / ".qwen" / "QWEN.md",
-                    "inline"))
-            elif a == "trae":
-                # ~/.trae/user_rules.md is the Trae IDE's global rules
-                # file (docs.trae.ai/ide/rules: "Global rules take
-                # effect in all projects"; the IDE Rules UI creates
-                # this exact file) - inline at the top so existing
-                # user rules survive. Windows: %userprofile%/.trae.
-                targets.append(_mk_target(
-                    ["trae"], home_base() / ".trae" / "user_rules.md",
-                    "inline"))
-            elif a == "antigravity":
-                # antigravity reads the SAME global file as gemini-cli
-                # ("Global rules live in ~/.gemini/GEMINI.md and are
-                # applied across all workspaces" - antigravity.google
-                # /docs/ide/rules + /docs/rules-workflows). Shared-file
-                # case, warp ~/.agents/AGENTS.md precedent: the marked
-                # block is idempotent, so selecting both agents writes
-                # one block; --remove cleans it for both (the removal
-                # candidate lists gemini-cli AND antigravity).
-                targets.append(_mk_target(
-                    ["antigravity"], home_base() / ".gemini" / "GEMINI.md",
-                    "inline"))
-            elif a == "kiro-cli":
-                # ~/.kiro/steering/ is Kiro's global steering dir -
-                # "Kiro will automatically load these files in chat
-                # sessions" (kiro.dev/docs/steering); on the CLI,
-                # inclusion modes are not supported at all, and on the
-                # IDE the default inclusion is always, so a bare drop
-                # file needs no frontmatter. Global steering applies
-                # to IDE + CLI only (not Web/Mobile). Project scope
-                # rides the shared ./AGENTS.md family block (root
-                # AGENTS.md is "always included", all surfaces).
-                targets.append(_mk_target(
-                    ["kiro-cli"], home_base() / ".kiro" / "steering" /
-                    "behave.md", "drop", drop_agent="kiro-cli"))
-            elif a == "qoder":
-                # User-level rules at ~/.qoder/rules/ apply to every
-                # project and "when no loading-related frontmatter is
-                # configured, rules are always active by default"
-                # (docs.qoder.com/cli/memory - documented, unlike the
-                # qwen-code equivalent). ~/.qoder/AGENTS.md is the
-                # other user surface; the drop file keeps behave in
-                # its own file. Project scope rides the shared
-                # ./AGENTS.md family block ("AGENTS.md is the default
-                # context file name", loaded at session start inside
-                # a trusted workspace).
-                targets.append(_mk_target(
-                    ["qoder"], home_base() / ".qoder" / "rules" /
-                    "behave.md", "drop", drop_agent="qoder"))
-            elif a == "grok":
-                # Grok Build (xAI, binary `grok`) scans $GROK_HOME (or
-                # ~/.grok) unconditionally: named files + rules/*.md
-                # at the home root, no off switch (agents_md.rs
-                # L187-302; docs.x.ai/build/features/project-rules).
-                # rules/*.md bodies are frontmatter-stripped, so a
-                # bare drop works. Project scope rides the shared
-                # ./AGENTS.md family block (repo-root-to-cwd chain,
-                # deeper files win). CAVEAT: the third-party
-                # superagent-ai/grok-cli also writes ~/.grok (no
-                # GROK_HOME) - the marker can false-positive; GROK_HOME
-                # is the disambiguator (kept, marker/target divergence
-                # precedent).
-                targets.append(_mk_target(
-                    ["grok"], home_base() / ".grok" / "rules" /
-                    "behave.md", "drop", drop_agent="grok"))
-            elif a == "mistral-vibe":
-                # Mistral Vibe loads up to two AGENTS.md files into
-                # context: the user-level ~/.vibe/AGENTS.md (or in
-                # $VIBE_HOME if set) and the first project AGENTS.md
-                # walking up from cwd, trusted folders only
-                # (docs.mistral.ai/vibe/code/cli/agents; OSS repo
-                # mistralai/mistral-vibe). VIBE_HOME exists but
-                # detection/install use the plain home path (qwen-code
-                # precedent). Project scope rides the shared
-                # ./AGENTS.md family block.
-                targets.append(_mk_target(
-                    ["mistral-vibe"], home_base() / ".vibe" / "AGENTS.md",
-                    "inline"))
-            elif a == "rovodev":
-                # Rovo Dev CLI memory: user-wide ~/.rovodev/AGENTS.md
-                # ("applies to all your Rovo Dev CLI sessions") plus
-                # project AGENTS.md + AGENTS.local.md per workspace
-                # (support.atlassian.com/rovo/docs/
-                # use-memory-in-rovo-dev-cli). Project scope rides the
-                # shared ./AGENTS.md family block.
-                targets.append(_mk_target(
-                    ["rovodev"], home_base() / ".rovodev" / "AGENTS.md",
-                    "inline"))
-            elif a == "bob":
-                # IBM Bob rules: user-global ~/.bob/rules/*.md "Apply
-                # automatically across all your projects" (plain text
-                # files, recursive + alphabetical; no frontmatter
-                # activation system documented - bare drop,
-                # kiro-cli/qoder/grok precedent). Project scope rides
-                # the shared ./AGENTS.md family block (root AGENTS.md
-                # "Automatically loaded by default", opt-out only via
-                # "bob-code.useAgentRules": false).
-                targets.append(_mk_target(
-                    ["bob"], home_base() / ".bob" / "rules" / "behave.md",
-                    "drop", drop_agent="bob"))
-            elif a == "trae-cn":
-                # Trae CN (docs.trae.cn/work_rules, TraeWork docs):
-                # global rules live under ~/.trae-cn/user_rules/ - the
-                # CN docs word it as a rules DIRECTORY (win
-                # %userprofile%/.trae-cn/user_rules), unlike the intl
-                # edition's single user_rules.md file; drop with
-                # alwaysApply like the project rules. Root AGENTS.md is
-                # toggle-gated + TraeWork-desktop-only -> NOT a family
-                # agent (intl precedent).
-                targets.append(_mk_target(
-                    ["trae-cn"],
-                    home_base() / ".trae-cn" / "user_rules" / "behave.md",
-                    "drop", drop_agent="trae-cn"))
-            elif a == "cortex":
-                # Snowflake Cortex Code (CoCo): user-scope instruction
-                # files are searched in ~/.snowflake/cortex/ (primary;
-                # the Custom instructions editor reads/writes
-                # ~/.snowflake/cortex/AGENTS.md) - Desktop-documented;
-                # the CLI documents project AGENTS.md but is silent on
-                # user instruction files (TODO-LEFT findings caveat).
-                # Project scope rides the shared ./AGENTS.md family
-                # block (root AGENTS.md auto-discovered workspace root
-                # -> git root, default on).
-                targets.append(_mk_target(
-                    ["cortex"],
-                    home_base() / ".snowflake" / "cortex" / "AGENTS.md",
-                    "inline"))
-            elif a == "antigravity-cli":
-                # Antigravity CLI (the Gemini CLI successor) keeps the
-                # same context-file rules: "The agent automatically
-                # consults and enforces your global constraints
-                # located at ~/.gemini/GEMINI.md" and parses workspace
-                # GEMINI.md + AGENTS.md (/docs/cli/gcli-migration,
-                # "Context files and workspace rules"). Third
-                # shared-file reader with gemini-cli + antigravity;
-                # the marked block is idempotent and the removal
-                # candidate lists all three. Project scope rides the
-                # shared ./AGENTS.md family block.
-                targets.append(_mk_target(
-                    ["antigravity-cli"],
-                    home_base() / ".gemini" / "GEMINI.md", "inline"))
-            elif a == "xum":
-                # xum (Coder; renamed cmux -> mux -> xum) reads
-                # ~/.xum/AGENTS.md as its user instructions file; a
-                # pre-existing file keeps its content below the marked
-                # block (amp/droid precedent). Legacy ~/.mux is
-                # auto-migrated by xum itself - detection-only marker.
-                # Project scope rides the shared ./AGENTS.md family
-                # block (first-match chain from cwd).
-                targets.append(_mk_target(
-                    ["xum"], home_base() / ".xum" / "AGENTS.md",
-                    "inline"))
-            elif a == "hermes-agent":
-                # Hermes Agent (Nous Research): ~/.hermes/SOUL.md is the
-                # identity file loaded every session - inline block at
-                # the top so existing content survives (create if
-                # absent). HERMES_HOME exists but install uses the
-                # plain path (qwen-code precedent); Windows native
-                # default is %LOCALAPPDATA%\hermes - marker stays
-                # ~/.hermes. Project scope rides the shared ./AGENTS.md
-                # family block (AGENTS.md is in its project chain).
-                targets.append(_mk_target(
-                    ["hermes-agent"], home_base() / ".hermes" / "SOUL.md",
-                    "inline"))
-            elif a == "aider-desk":
-                # AiderDesk (hotovo): user rules at ~/.aider-desk/rules/
-                # are always active - no frontmatter system documented,
-                # bare drop (kiro-cli/qoder/grok/bob precedent). Agent
-                # mode auto-loads the root AGENTS.md, so project scope
-                # rides the shared ./AGENTS.md family block.
-                targets.append(_mk_target(
-                    ["aider-desk"], home_base() / ".aider-desk" /
-                    "rules" / "behave.md", "drop", drop_agent="aider-desk"))
-            elif a == "forgecode":
-                # ForgeCode (Tailcall): ~/.forge/AGENTS.md is the global
-                # instructions file - inline block at the top so
-                # existing content survives. FORGE_CONFIG exists but
-                # install uses the plain path; legacy ~/forge is
-                # presence-only, not a marker. Project scope rides the
-                # shared ./AGENTS.md family block.
-                targets.append(_mk_target(
-                    ["forgecode"], home_base() / ".forge" / "AGENTS.md",
-                    "inline"))
-            elif a == "command-code":
-                # Command Code (Langbase): ~/.commandcode/AGENTS.md is
-                # the global instructions file - inline block at the
-                # top so existing content survives. Project scope rides
-                # the shared ./AGENTS.md family block (<root>/AGENTS.md
-                # is the default project context file).
-                targets.append(_mk_target(
-                    ["command-code"],
-                    home_base() / ".commandcode" / "AGENTS.md", "inline"))
-            elif a == "qoder-cn":
-                # Qoder CLI CN mirrors the intl qoder exactly: user
-                # rules at ~/.qoder-cn/rules/ are always active by
-                # default - bare drop, no frontmatter (qoder
-                # precedent). QODERCN_CONFIG_DIR exists but install
-                # uses the plain path. Project scope rides the shared
-                # ./AGENTS.md family block (the CN CLI reads project
-                # AGENTS.md).
-                targets.append(_mk_target(
-                    ["qoder-cn"], home_base() / ".qoder-cn" / "rules" /
-                    "behave.md", "drop", drop_agent="qoder-cn"))
-            elif a == "tabnine-cli":
-                # Tabnine CLI: ~/.tabnine/agent/TABNINE.md is the
-                # user-level instructions file (the agent/ dir is
-                # created if absent) - inline block at the top so
-                # existing content survives. Project scope writes its
-                # OWN ./TABNINE.md target, NOT the shared AGENTS.md
-                # family block - tabnine reads TABNINE.md, not
-                # AGENTS.md (gemini-cli GEMINI.md precedent).
-                targets.append(_mk_target(
-                    ["tabnine-cli"],
-                    home_base() / ".tabnine" / "agent" / "TABNINE.md",
-                    "inline"))
-            elif a == "codewhale":
-                # Codewhale (Hmbown; Rust CLI) checks the global
-                # ~/.codewhale/AGENTS.md every session and merges it
-                # with the project one - global prepended, project gets
-                # the last word (source #1157) - so the marked block
-                # rides at the top (amp/droid precedent; file created
-                # if absent). Real $HOME path, NOT a
-                # CODEWHALE_HOME-redirected one. Aggregate 48 KiB
-                # instruction budget trims the broadest scope first -
-                # the block stays small by design. Project scope rides
-                # the shared ./AGENTS.md family block (AGENTS.md
-                # canonical, CLAUDE.md fallbacks).
-                targets.append(_mk_target(
-                    ["codewhale"], home_base() / ".codewhale" / "AGENTS.md",
-                    "inline"))
-            elif a == "jcode":
-                # jcode (1jehuang; Rust harness): ~/.jcode/
-                # prompt-overlay.md is the jcode-scoped global - the
-                # "Global Prompt Overlay", prepended to every session.
-                # The bare ~/AGENTS.md is ALSO read globally but is
-                # skipped as a shared cross-agent surface - the
-                # overlay is chosen deliberately. JCODE_HOME exists
-                # but detection/install use the plain home path
-                # (qwen-code precedent). Project scope rides the
-                # shared ./AGENTS.md family block (the default
-                # chain).
-                targets.append(_mk_target(
-                    ["jcode"], home_base() / ".jcode" / "prompt-overlay.md",
-                    "inline"))
-            elif a == "codebuff":
-                # Codebuff (npm CLI): user knowledge files are
-                # ~/.AGENTS.md > ~/.CLAUDE.md - first found only,
-                # case-insensitive, loaded every session (sdk
-                # run-state.ts loadUserKnowledgeFiles); ~/.knowledge.md
-                # left the priority list in current source despite the
-                # docs. BARE home dotfile - first of its kind, but the
-                # same inline-upsert mechanics: create ~/.AGENTS.md if
-                # absent, preserve existing content, marked block at
-                # the top. Project scope rides the shared ./AGENTS.md
-                # family block (root AGENTS.md/CLAUDE.md injected as
-                # "Project instructions").
-                targets.append(_mk_target(
-                    ["codebuff"], home_base() / ".AGENTS.md", "inline"))
-            elif a == "kimchi":
-                # Kimchi (CAST AI): the global context file
-                # ~/.config/kimchi/harness/AGENTS.md is loaded EVERY
-                # session, before project files (context-files.ts);
-                # entry.ts hardcodes homedir()/.config/kimchi/harness
-                # and force-sets its env vars, so overrides are
-                # clobbered - no env registered, plain home path only
-                # (amp precedent: home_base()/".config", NOT
-                # xdg_base(); %USERPROFILE%\.config\kimchi on Windows,
-                # no APPDATA). Project scope rides the shared
-                # ./AGENTS.md family block (AGENTS.md/CLAUDE.md walk
-                # cwd->root).
-                targets.append(_mk_target(
-                    ["kimchi"],
-                    home_base() / ".config" / "kimchi" / "harness" /
-                    "AGENTS.md", "inline"))
-            elif a == "pochi":
-                # Pochi (TabbyML): ~/.pochi/README.pochi.md is the
-                # single fixed GlobalRules path, default-on every
-                # session, inline-merged, no truncation
-                # (custom-rules.ts L14-16; hermes-agent precedent of
-                # a non-AGENTS.md user file). AGENTS.md is NOT loaded
-                # at user level. Windows: %USERPROFILE%\.pochi.
-                # Project scope rides the shared ./AGENTS.md family
-                # block (BOTH README.pochi.md and AGENTS.md at cwd
-                # load; a project README.pochi.md is never written -
-                # junie .junie/AGENTS.md precedent).
-                targets.append(_mk_target(
-                    ["pochi"],
-                    home_base() / ".pochi" / "README.pochi.md", "inline"))
-            elif a == "reasonix":
-                # Reasonix (DeepSeek; esengine/DeepSeek-Reasonix):
-                # <home>/REASONIX.md is the ScopeUser rules file,
-                # loaded unconditionally at every boot into the
-                # cache-stable system prefix (resolver.go L24/L121-132,
-                # boot.go L650-657); REASONIX.md is canonical over the
-                # also-accepted AGENTS.md/CLAUDE.md in the same dir -
-                # the agent's own DocPath prefers an existing
-                # REASONIX.md, so the block absorbs later agent
-                # appends. Home: %APPDATA%\reasonix on Windows,
-                # ~/.reasonix elsewhere (devin platform-split
-                # precedent); REASONIX_HOME/REASONIX_STATE_HOME
-                # overrides exist but the plain path is used
-                # (qwen-code precedent); edits apply next session
-                # (cache-stable). Project scope rides the shared
-                # ./AGENTS.md family block (REASONIX.md/AGENTS.md/
-                # CLAUDE.md + .local.md variants, git-root->cwd chain,
-                # ALL matches load).
-                targets.append(_mk_target(
-                    ["reasonix"], reasonix_home() / "REASONIX.md",
-                    "inline"))
-            elif a == "deepseek-harness":
-                # DeepSeek Harness (DeepSeek AI; CLI dsh): ~/.dsh/AGENTS.md
-                # is the fixed user-global instruction file, loaded as
-                # baseline before the first request by the
-                # dsh-agent-instructions plugin - "dsh-base enables this
-                # behavior by default" (package README; config.ts
-                # dshHome "defaults to $DSH_HOME or ~/.dsh"). Byte
-                # budget trims the broadest scope first, so the block
-                # stays small (codewhale caveat precedent). DSH_HOME
-                # override exists but the plain path is used
-                # (qwen-code/reasonix precedent). Project scope rides
-                # the shared ./AGENTS.md family block (AGENTS.md +
-                # CLAUDE.md per dir + .local overlays, cwd->git-root
-                # walk, every existing file loads).
-                targets.append(_mk_target(
-                    ["deepseek-harness"],
-                    home_base() / ".dsh" / "AGENTS.md", "inline"))
+                continue
+            for path, mode, drop_agent, ags in _USER_TARGETS[a]():
+                targets.append(_mk_target(ags, path, mode,
+                                          drop_agent=drop_agent))
         return targets, notes
 
     # project scope
@@ -1534,98 +1384,34 @@ def scan_removal(agent_filter, scope_filter, variant_filter, project_dir,
         add(claude_dir() / "CLAUDE.md", "inline", ["claude-code"])
         add(claude_dir() / "rules" / "behave.md", "drop", ["claude-code"],
             drop_agent="claude-code")
-        add(codex_dir() / "AGENTS.md", "inline", ["codex"])
-        add(xdg_base() / "opencode" / "AGENTS.md", "inline", ["opencode"])
-        add(home_base() / ".pi" / "agent" / "AGENTS.md", "inline", ["pi"])
-        add(home_base() / ".omp" / "agent" / "AGENTS.md", "inline", ["omp"])
-        for d in devin_dirs():
-            add(d / "AGENTS.md", "inline", ["devin"])
-        add(home_base() / ".cursor" / "rules" / "behave.mdc", "drop",
-            ["cursor"], drop_agent="cursor")
-        # shared ~/.gemini/GEMINI.md: gemini-cli + antigravity +
-        # antigravity-cli - one candidate, three readers, one block
-        add(home_base() / ".gemini" / "GEMINI.md", "inline",
-            ["gemini-cli", "antigravity", "antigravity-cli"])
-        add(home_base() / ".copilot" / "instructions" / "behave.instructions.md",
-            "drop", ["github-copilot"], drop_agent="github-copilot")
-        add(home_base() / ".roo" / "rules" / "behave.md", "drop", ["roo"],
-            drop_agent="roo")
-        add(home_base() / ".augment" / "rules" / "behave.md", "drop",
-            ["augment"], drop_agent="augment")
-        add(home_base() / ".kilocode" / "rules" / "behave.md", "drop",
-            ["kilo"], drop_agent="kilo")
-        add(home_base() / ".factory" / "AGENTS.md", "inline", ["droid"])
-        add(home_base() / ".deepagents" / "agent" / "AGENTS.md", "inline",
-            ["deepagents"])
-        add(home_base() / ".cline" / "rules" / "behave.md", "drop",
-            ["cline"], drop_agent="cline")
-        add(xdg_base() / "crush" / "CRUSH.md", "inline", ["crush"])
-        add(home_base() / ".config" / "amp" / "AGENTS.md", "inline",
-            ["amp"])
-        add(goose_config_dir() / "AGENTS.md", "inline", ["goose"])
-        for d in zed_dirs():
-            add(d / "AGENTS.md", "inline", ["zed"])
-        add(home_base() / ".agents" / "skills" / "behave.md", "drop",
-            ["openhands"], drop_agent="openhands")
-        add(home_base() / ".agents" / "AGENTS.md", "inline", ["warp"])
-        add(home_base() / ".junie" / "AGENTS.md", "inline", ["junie"])
-        add(home_base() / ".posit" / "assistant" / "AGENTS.md", "inline",
-            ["posit-assistant"])
-        add(home_base() / ".zcode" / "AGENTS.md", "inline", ["zcode"])
-        add(home_base() / ".openclaw" / "workspace" / "AGENTS.md",
-            "inline", ["openclaw"])
-        add(home_base() / ".kimi-code" / "AGENTS.md", "inline",
-            ["kimi-code-cli"])
-        add(home_base() / ".qwen" / "QWEN.md", "inline", ["qwen-code"])
-        add(home_base() / ".trae" / "user_rules.md", "inline", ["trae"])
-        add(home_base() / ".kiro" / "steering" / "behave.md", "drop",
-            ["kiro-cli"], drop_agent="kiro-cli")
-        add(home_base() / ".qoder" / "rules" / "behave.md", "drop",
-            ["qoder"], drop_agent="qoder")
-        add(home_base() / ".grok" / "rules" / "behave.md", "drop",
-            ["grok"], drop_agent="grok")
-        add(home_base() / ".vibe" / "AGENTS.md", "inline",
-            ["mistral-vibe"])
-        add(home_base() / ".rovodev" / "AGENTS.md", "inline", ["rovodev"])
-        add(home_base() / ".bob" / "rules" / "behave.md", "drop",
-            ["bob"], drop_agent="bob")
-        add(home_base() / ".trae-cn" / "user_rules" / "behave.md",
-            "drop", ["trae-cn"], drop_agent="trae-cn")
-        add(home_base() / ".snowflake" / "cortex" / "AGENTS.md",
-            "inline", ["cortex"])
-        add(home_base() / ".xum" / "AGENTS.md", "inline", ["xum"])
-        add(home_base() / ".hermes" / "SOUL.md", "inline",
-            ["hermes-agent"])
-        add(home_base() / ".aider-desk" / "rules" / "behave.md",
-            "drop", ["aider-desk"], drop_agent="aider-desk")
-        add(home_base() / ".forge" / "AGENTS.md", "inline",
-            ["forgecode"])
-        add(home_base() / ".commandcode" / "AGENTS.md", "inline",
-            ["command-code"])
-        add(home_base() / ".qoder-cn" / "rules" / "behave.md",
-            "drop", ["qoder-cn"], drop_agent="qoder-cn")
-        add(home_base() / ".tabnine" / "agent" / "TABNINE.md",
-            "inline", ["tabnine-cli"])
-        add(home_base() / ".codewhale" / "AGENTS.md", "inline",
-            ["codewhale"])
-        add(home_base() / ".jcode" / "prompt-overlay.md", "inline",
-            ["jcode"])
-        add(home_base() / ".AGENTS.md", "inline", ["codebuff"])
-        add(home_base() / ".config" / "kimchi" / "harness" / "AGENTS.md",
-            "inline", ["kimchi"])
-        add(home_base() / ".pochi" / "README.pochi.md", "inline",
-            ["pochi"])
-        add(home_base() / ".reasonix" / "REASONIX.md", "inline",
-            ["reasonix"])
-        # parity for BOTH platform homes (Windows APPDATA + Unix
-        # dotdir) so a platform switch or a stray marked file is
-        # always cleaned - candidates only fire on existing files
+        # shared files (the ~/.gemini/GEMINI.md triple: gemini-cli +
+        # antigravity + antigravity-cli) collapse into ONE candidate
+        # listing every reader - one block, one removal entry
+        merged = {}
+        for build in _USER_TARGETS.values():
+            for path, mode, drop_agent, ags in build():
+                key = (str(path), mode)
+                if key in merged:
+                    _p, _m, d0, a0 = merged[key]
+                    merged[key] = (path, mode, d0 or drop_agent,
+                                   a0 + [x for x in ags if x not in a0])
+                else:
+                    merged[key] = (path, mode, drop_agent, list(ags))
+        # reasonix reads REASONIX.md from EITHER platform home (Windows
+        # %APPDATA%\reasonix via reasonix_home(), Unix ~/.reasonix); the
+        # table row carries the install path, the scan covers BOTH homes
+        # so a platform switch or a stray marked file is always cleaned
+        # (candidates only fire on existing files)
+        rx_extra = [home_base() / ".reasonix" / "REASONIX.md"]
         appd_rx = appdata_base()
         if appd_rx is not None:
-            add(appd_rx / "reasonix" / "REASONIX.md", "inline",
-                ["reasonix"])
-        add(home_base() / ".dsh" / "AGENTS.md", "inline",
-            ["deepseek-harness"])
+            rx_extra.append(appd_rx / "reasonix" / "REASONIX.md")
+        for rx in rx_extra:
+            key = (str(rx), "inline")
+            if key not in merged:
+                merged[key] = (rx, "inline", None, ["reasonix"])
+        for path, mode, drop_agent, ags in merged.values():
+            add(path, mode, ags, drop_agent=drop_agent)
 
     if scope_filter in (None, "project", "local"):
         d = Path(project_dir) if project_dir is not None else Path.cwd()
@@ -1832,11 +1618,8 @@ def cmd_list(args):
     if not det:
         print("  (none)")
     for d in det:
-        note = ""
-        if d["id"] not in TIER1_SET:
-            note = "  (no install support)"
         paths = ", ".join(str(p) for p in d["paths"])
-        print("  %-16s %s%s" % (d["id"], paths, note))
+        print("  %-16s %s" % (d["id"], paths))
     det_ids = set(d["id"] for d in det)
     extra = [a for a in ALL_IDS if a not in det_ids]
     print("Additional supported agents (%d):" % len(extra))
@@ -1855,28 +1638,13 @@ def cmd_install(args):
             else Path.cwd()
         scope = "project" if find_git_root(base) else "user"
 
-    agents = [a for a in requested if a in TIER1_SET]
-    for a in requested:
-        if a not in TIER1_SET:
-            say("note: %s has no install support yet (detect-only); "
-                "skipping" % a)
+    agents = list(requested)
     if args.all_detected:
-        det = detect_agents()
-        unsupported_detected = []
-        for d in det:
-            if d["id"] in TIER1_SET:
-                if d["id"] not in agents:
-                    agents.append(d["id"])
-            else:
-                unsupported_detected.append(d["id"])
-        if unsupported_detected:
-            say("note: detected without install support: %s"
-                % ", ".join(sorted(unsupported_detected)))
+        for d in detect_agents():
+            if d["id"] not in agents:
+                agents.append(d["id"])
     if not agents:
-        if requested:
-            err("no install support for: %s (detect-only); nothing to do"
-                % ", ".join(requested))
-        elif args.all_detected:
+        if args.all_detected:
             err("no supported agents detected on this machine")
         else:
             err("no agents specified; pass --agent ID or --all-detected")
@@ -1896,7 +1664,7 @@ def cmd_install(args):
     claude_mode = args.claude_mode or "rules"
 
     targets, notes = build_install_plan(
-        agents, scope, variant, claude_mode, project_dir, args.block_id)
+        agents, scope, variant, claude_mode, project_dir)
     for n in notes:
         say(n)
 
@@ -1909,15 +1677,7 @@ def cmd_install(args):
                 "(--copy-only is exempt)")
             return 5
         results = execute_targets(targets, source, args.block_id, project_dir)
-        written = [r for r in results if not r["error"]]
-        ok_paths = set()
-        for t, r in zip(targets, results):
-            if not r["error"]:
-                ok_paths.add(t["path"])
-        if written:
-            stale_hint(ok_paths, project_dir, args.block_id)
-            say("Done - restart your agents to pick up changes.")
-            say("python install.py --remove to uninstall.")
+        _summary_after_install(results, targets, project_dir, args.block_id)
 
     if args.json:
         print(json.dumps({
@@ -2758,7 +2518,7 @@ def _target_label(t):
     return " / ".join([str(DISPLAY.get(a, a)) for a in t["agents"]])
 
 
-def _preview_targets(targets, project_dir):
+def _preview_targets(targets):
     print()
     print("What will change - read this part:")
     print("  Your own instructions keep MORE weight, not less:")
@@ -2789,8 +2549,7 @@ def _preview_targets(targets, project_dir):
                   "exists)")
 
 
-def _summary_after_install(results, targets, project_dir, block_id,
-                           source_label):
+def _summary_after_install(results, targets, project_dir, block_id):
     ok_paths = set()
     for t, r in zip(targets, results):
         if not r["error"]:
@@ -2981,7 +2740,7 @@ def _tui_user(args, reader, source):
     # plain det_map membership is the detected test here; the agent
     # menu below IS the report.
     prechecked = set(aid for aid in TIER1_ORDER if aid in det_map)
-    requested = [a for a in _parse_requested_agents(args) if a in TIER1_SET]
+    requested = _parse_requested_agents(args)
     prechecked.update(requested)
     # already-installed agents (user scope): the picker renders their
     # checked rows as [X] so a re-run shows what is in place
@@ -2996,20 +2755,19 @@ def _tui_user(args, reader, source):
         print("nothing selected; nothing written")
         return 0
     targets, notes = build_install_plan(
-        chosen, "user", None, args.claude_mode or "rules", None, args.block_id)
+        chosen, "user", None, args.claude_mode or "rules", None)
     for nt in notes:
         print(nt)
     if not targets:
         print("nothing to install")
         return 0
-    _preview_targets(targets, None)
+    _preview_targets(targets)
     print()
     if not _confirm(reader, args.yes):
         print("aborted; nothing written")
         return 0
     results = execute_targets(targets, source, args.block_id, None)
-    _summary_after_install(results, targets, None, args.block_id,
-                           source.label)
+    _summary_after_install(results, targets, None, args.block_id)
     for r in results:
         if r["error"]:
             return 4
@@ -3046,6 +2804,16 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
         ans = pre_map[pre_variant]
         print("> (%s) (pre-selected via flags)" % ans)
         return pre_variant
+
+    def parse_text(buf):
+        s = buf.strip()
+        if s.lower() in ("q", "quit"):
+            raise QuitTUI()
+        for num, name, desc, path, var in entries:
+            if s.strip("()") == num:
+                return var
+        return None
+
     if reader.raw_keys():
         rows = []
         keys = []
@@ -3055,15 +2823,6 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
             keys.append(num)
         rows.append("(q) %-18s - exit without changing anything" % "quit")
         keys.append("q")
-
-        def parse_text(buf):
-            s = buf.strip()
-            if s.lower() in ("q", "quit"):
-                raise QuitTUI()
-            for num, name, desc, path, var in entries:
-                if s.strip("()") == num:
-                    return var
-            return None
 
         var = _widget_choice(
             reader,
@@ -3079,10 +2838,9 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
         return var  # None = Esc = back to the family menu
     print_menu()
     while True:
-        ans = _inp(reader, "> ").strip()
-        for num, name, desc, path, var in entries:
-            if ans.strip("()") == num:
-                return var
+        var = parse_text(_inp(reader, "> "))
+        if var is not None:
+            return var
         print("  pick 1-4 (q quits)")
 
 
@@ -3140,15 +2898,9 @@ def _tui_pick_family(reader, forced=None):
     print("                (not tracked by --remove).")
     print("  (q)uit      - exit without changing anything")
     while True:
-        ans = _inp(reader, "> ").strip().lower()
-        if ans in ("a", "agents.md", "agents"):
-            return "a"
-        if ans in ("c", "claude.md", "claude"):
-            return "c"
-        if ans in ("g", "gemini.md", "gemini"):
-            return "g"
-        if ans in ("j", "just copy", "copy"):
-            return "j"
+        fam = parse_text(_inp(reader, "> "))
+        if fam is not None:
+            return fam
         print("  answer a, c, g, j or q")
 
 
@@ -3156,7 +2908,7 @@ def _tui_project(args, reader, source, pre_variant):
     project_dir = _project_dir_of(args)
     print()
     print("Project directory: %s" % project_dir)
-    requested = [a for a in _parse_requested_agents(args) if a in TIER1_SET]
+    requested = _parse_requested_agents(args)
     fam_of = {}
     for a in requested:
         if a == "claude-code":
@@ -3209,7 +2961,7 @@ def _tui_project(args, reader, source, pre_variant):
             project_dir / ".github" / "copilot-instructions.md",
             "inline"))
 
-    _preview_targets(targets, project_dir)
+    _preview_targets(targets)
     print()
     if not _confirm(reader, args.yes):
         print("aborted; nothing written")
@@ -3240,7 +2992,7 @@ def _tui_project(args, reader, source, pre_variant):
                             "mode": "copy", "status": "skipped",
                             "warning": None, "error": str(exc)})
     _summary_after_install(results, real_targets, project_dir,
-                           args.block_id, source.label)
+                           args.block_id)
     for r in results:
         if r["error"]:
             return 4
@@ -3323,23 +3075,23 @@ def _tui_flow(args, reader):
     pre_scope = None
     if args.scope in ("user", "project", "local"):
         pre_scope = args.scope
+
+    def parse_scope(buf):
+        a = buf.strip().lower()
+        if a in ("q", "quit"):
+            raise QuitTUI()
+        if a in ("u", "user"):
+            return "user"
+        if a in ("p", "proj", "project"):
+            return "project"
+        return None
+
     while True:
         # the scope ask lives INSIDE the wizard loop so _BACK
         # re-renders this menu - the wizard start - instead of
         # silently re-dispatching the previous branch
         if pre_scope is None:
             if reader.raw_keys():
-
-                def parse_scope(buf):
-                    a = buf.strip().lower()
-                    if a in ("q", "quit"):
-                        raise QuitTUI()
-                    if a in ("u", "user"):
-                        return "user"
-                    if a in ("p", "proj", "project"):
-                        return "project"
-                    return None
-
                 pre_scope = _widget_choice(
                     reader,
                     ["Where should the rules apply?"],
@@ -3362,12 +3114,8 @@ def _tui_flow(args, reader):
                 print("  (p)roject - this directory only (cwd: %s)" % Path.cwd())
                 print("  (q)uit    - exit without changing anything")
                 while True:
-                    a = _inp(reader, "> ").strip().lower()
-                    if a in ("u", "user"):
-                        pre_scope = "user"
-                        break
-                    if a in ("p", "proj", "project"):
-                        pre_scope = "project"
+                    pre_scope = parse_scope(_inp(reader, "> "))
+                    if pre_scope is not None:
                         break
                     print("  answer u, p or q")
         if pre_scope == "user":
