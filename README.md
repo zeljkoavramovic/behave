@@ -4,8 +4,6 @@
 
 One file. Zero dependencies. Discipline every AI coding session.
 
-
-
 ## Overview
 
 Instructions that make AI coding assistants actually behave, so every coding session becomes more disciplined, more predictable, and more productive.
@@ -15,8 +13,6 @@ The ideas come from **[Andrej Karpathy's](https://x.com/karpathy/status/20158838
 ~~A **[single-page walkthrough](https://zeljkoavramovic.github.io/behave/)** adds visual diagrams, side navigation, a before/after comparison, a feature comparison table, an FAQ, and one-click install commands.~~
 
 Supports **Claude Code**, **Codex**, **Cursor**, **OpenCode**, **Kilo Code**, **Cline**, **Antigravity**, **Pi**, **DeepSeek Harness**, **ZCode**, **OpenClaw**, **Hermes**, and 40 other agents. The installer lets you choose from the list of auto-detected agents and asks whether you want a global install or a project-directory install. Depending on the kind of agent, installer drops the behaving instructions file into the agent's rules directory, or injects into `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md`. No dependencies, one file, and simple deinstallation if needed.
-
-
 
 ## The problem it solves
 
@@ -178,19 +174,15 @@ The repo ships two files. `BEHAVE.md` is the rules file itself - pure Markdown, 
 
 ### Installer (recommended)
 
-**Windows (PowerShell):**
-
-```powershell
-iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py" -OutFile install.py; python install.py
-```
-
-**Linux / macOS:**
+Any OS with Python - runs straight from the repo, nothing is left in your directory:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py -o install.py && python3 install.py
+python -c "import urllib.request; exec(compile(urllib.request.urlopen('https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py').read(), 'install.py', 'exec'), {'__file__': 'install.py', '__name__': '__main__'})"
 ```
 
-Use `python`, `python3`, or `py` per your platform (on Windows, `py install.py` also works). No registry, no account, no npm - one Python script, standard library only, Python 3.6 or newer.
+Use `python`, `python3`, or `py` per your platform; append any documented flags after the closing quote (for example `--list`, or `--remove --yes` to uninstall). No registry, no account, no npm - one Python script, standard library only, Python 3.6 or newer.
+
+Prefer a local copy of the script? Windows (PowerShell): `iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py" -OutFile install.py; python install.py` - Linux / macOS: `curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/install.py -o install.py && python3 install.py`
 
 The installer asks where the rules should apply (all your projects or just this one), auto-detects your installed agents, shows exactly what will change, and asks before writing.
 
@@ -248,8 +240,6 @@ Works natively with **Claude Code** and **OpenCode**. For other AI coding tools,
 - **[Multica](https://github.com/multica-ai/andrej-karpathy-skills)** - CLAUDE.md adaptation of Karpathy's principles
 - **[David Scott Bernstein](https://github.com/ThePassionateProgrammer)** - partnership-driven working-agreement style
 - **[Zeljko Avramovic](https://github.com/zeljkoavramovic)** - systematization and expansion: precedence model, operating modes, wording semantics, shared vocabulary layer, verification framework, hard-stop protocol, broken-baseline handling, task reporting, documentation rules
-
-
 
 ## Support the project
 
