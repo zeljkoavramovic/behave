@@ -91,7 +91,7 @@ def test_19_interactive_tui_rules_drop(run, env_for, fake_home, proj,
     f = proj / ".claude" / "rules" / "behave.md"
     assert f.is_file()
     assert f.read_bytes().startswith(MARKER)
-    assert "What will change" in r.stdout
+    assert "new file" in r.stdout
     assert "Proceed?" in r.stdout
 
 
@@ -395,7 +395,7 @@ def test_agent_menu_zero_detections_enter_then_all(run, env_for,
         in r.stdout
     assert "s = select all shown" in r.stdout
     assert "nothing is pre-checked" in r.stdout
-    assert "What will change" in r.stdout
+    assert "Proceed?" in r.stdout
     assert "aborted; nothing written" in combined
     assert "Traceback" not in combined
 

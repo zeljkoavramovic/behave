@@ -27,9 +27,9 @@ def test_smoke_full_cycle(run, env_for, tmp_path, src_file, git_available):
     assert r2.returncode == 0, r2.stdout + r2.stderr
     r3 = run(["--agent", "cursor", "--scope", "project"] + base, env=env)
     assert r3.returncode == 0, r3.stdout + r3.stderr
-    # cursor joined the family: one shared AGENTS.md target whose agent
-    # field lists the whole family (no .cursor/rules drop anymore)
-    assert "codex,opencode,devin,cursor,pi,omp" in r3.stdout
+    # cursor joined the family: one shared AGENTS.md target (no
+    # .cursor/rules drop anymore); the ok line names the shared file
+    assert str(repo / "AGENTS.md") in r3.stdout
 
     f_rules = repo / ".claude" / "rules" / "behave.md"
     f_agents = repo / "AGENTS.md"

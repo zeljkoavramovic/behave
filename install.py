@@ -52,6 +52,14 @@ Managed-block markers (block id defaults to "behave"):
   drop:    <!-- installed by install.py ({id}); --remove deletes this file -->
 """
 
+import sys
+
+# before the other imports: on Py2, urllib.request dies first; and this
+# can only fire while the whole file stays Py2-parseable (no f-strings)
+if sys.version_info < (3, 6):
+    sys.exit("error: Python 3.6 or newer required, you have %s"
+             % sys.version.split()[0])
+
 import argparse
 import difflib
 import hashlib
@@ -1333,7 +1341,7 @@ def execute_targets(targets, source, block_id, project_dir=None):
                 if warning:
                     entry["warning"] = warning
                     say("  warning: %s" % warning)
-            say("  ok    %-28s %s: %s" % (t["agent"], detail, t["path"]))
+            say("  ok    %s: %s" % (detail, t["path"]))
             if t["gitignore"]:
                 note = gitignore_step(project_dir, t["path"].name)
                 if note:
@@ -1341,7 +1349,7 @@ def execute_targets(targets, source, block_id, project_dir=None):
             results.append(entry)
         except TargetError as exc:
             entry["error"] = str(exc)
-            err("target failed (%s): %s" % (t["agent"], exc))
+            err("target failed: %s" % (exc,))
             results.append(entry)
     return results
 
@@ -1473,8 +1481,6 @@ def execute_removal(findings, block_id):
                     say("  removed block; file empty -> deleted %s" % f["path"])
                 else:
                     say("  removed block from %s" % f["path"])
-                if f["shared"]:
-                    say("    (served %s)" % f["agent"])
             else:
                 f["path"].unlink()
                 say("  removed %s" % f["path"])
@@ -1747,7 +1753,7 @@ def cmd_remove(args):
     for f in findings:
         say("  %-40s (%s; %s)" % (str(f["path"]), f["agent"], f["mode"]))
     if not args.yes:
-        err("confirmation missing: pass --yes to remove (headless mode)")
+        err("confirmation missing, pass --yes to remove")
         return 5
     results = execute_removal(findings, args.block_id)
     if args.json:
@@ -2515,18 +2521,8 @@ def _widget_choice(reader, title, rows, footer, invalid_msg, parse_text,
     return value
 
 
-def _target_label(t):
-    if t["shared"]:
-        # derived, not hardcoded: the family grows and hardcodes went
-        # stale before (omp was missing from this label)
-        return " / ".join(DISPLAY.get(a, a) for a in FAMILY_IDS)
-    return " / ".join([str(DISPLAY.get(a, a)) for a in t["agents"]])
-
-
 def _preview_targets(targets):
     print()
-    print("What will change - read this part:")
-    print("  Your own instructions keep MORE weight, not less:")
     for t in targets:
         if t["kind"] == "copy":
             print("  - plain copy: %s" % t["path"])
@@ -2535,19 +2531,17 @@ def _preview_targets(targets):
             continue
         existed = t["path"].exists()
         if t["mode"] == "drop":
-            print("  - %s: new file %s" % (_target_label(t), t["path"]))
+            print("  - new file %s" % t["path"])
             print("    (%s; the rules dir is created if missing)"
                   % DROP_CONSENT)
             if t["drop_agent"] == "cursor":
                 print("    (loads only for projects inside your home dir; "
                       "for other projects use project scope)")
         elif existed:
-            print("  - %s: rules block AT THE TOP of %s"
-                  % (_target_label(t), t["path"]))
+            print("  - rules block AT THE TOP of %s" % t["path"])
             print("    (%s)" % INLINE_CONSENT)
         else:
-            print("  - %s: create %s with the rules block"
-                  % (_target_label(t), t["path"]))
+            print("  - create %s with the rules block" % t["path"])
             print("    (%s)" % INLINE_CONSENT)
         if t["gitignore"]:
             print("    (local file; will be gitignored when a git repo "
