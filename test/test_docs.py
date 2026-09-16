@@ -38,14 +38,13 @@ def _index_html():
 
 def _readme_roster(readme):
     """Returns (stated_count, [display names]) from the installer
-    paragraph: the 'It supports N agents' sentence plus the
-    collapsible '<summary>Full agent list (N)</summary> ... </details>'
-    block that follows it."""
-    m = re.search(r"It supports (\d+) agents", readme)
-    assert m, "README agent-count sentence ('It supports N agents') not found"
-    d = re.search(r"<summary>Full agent list \(\d+\)</summary>\s*(.+?)\s*</details>",
+    paragraph: the '**Supported agents list (N):**' heading plus the
+    comma-separated roster paragraph that follows it."""
+    m = re.search(r"Supported agents list \((\d+)\):", readme)
+    assert m, "README agent-count heading ('Supported agents list (N):') not found"
+    d = re.search(r"Supported agents list \(\d+\):\*\*\s+(.+?)\n\s*\n",
                   readme, re.DOTALL)
-    assert d, "README collapsible roster block not found"
+    assert d, "README roster paragraph not found"
     tokens = []
     for tok in d.group(1).split(","):
         tok = tok.strip()
