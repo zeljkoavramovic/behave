@@ -1226,6 +1226,16 @@ def test_tui_flow_variant_esc_back_pure(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     assert "variant-esc-ok" in r.stdout
     assert "Which Claude file?" in r.stdout
+    # path-display policy: the prose home path renders via home_disp()
+    # (native separators; never "~" on Windows)
+    want = ("~/.claude/CLAUDE.md" if os.name != "nt"
+            else "%USERPROFILE%\\.claude\\CLAUDE.md")
+    hdr = [ln for ln in r.stdout.splitlines()
+           if "come before all of these" in ln]
+    assert hdr, r.stdout
+    assert want in hdr[0], hdr[0]
+    if os.name == "nt":
+        assert "~" not in hdr[0], hdr[0]
     # family visited twice: visit1 = render + down-redraw (enter
     # returns without redraw), visit2 = render (the immediate q quits
     # on the keypress - no typed-q redraw since letters stopped

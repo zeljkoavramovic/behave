@@ -359,6 +359,21 @@ def home_base():
     return Path.home()
 
 
+# Home shorthand for PROSE display only (menus, help, warnings): "~" on
+# POSIX, "%USERPROFILE%" on Windows (rustup precedent - cmd.exe expands
+# it, PowerShell 7.6+ expands ~ natively; no form works in every shell,
+# which is why copy-paste-exact output - errors, JSON, previews,
+# resolved paths - stays absolute str(Path)). Guarded by
+# test_path_display.py: never hardcode "~/" in a user-facing literal.
+HOME_TAG = "~" if os.name != "nt" else "%USERPROFILE%"
+
+
+def home_disp(*parts):
+    """Home-relative display path, OS-native separators:
+    ~/.claude/CLAUDE.md (POSIX), %USERPROFILE%\\.claude\\CLAUDE.md (nt)."""
+    return HOME_TAG + "".join(os.sep + p for p in parts)
+
+
 def xdg_base():
     v = os.environ.get("XDG_CONFIG_HOME")
     if v:
@@ -769,10 +784,11 @@ def cursor_user_warning():
     """Limitation note for user-scope Cursor drops: Cursor loads
     ~/.cursor/rules only when the opened project is inside the home
     directory (it walks up from the project dir to discover it)."""
-    return ("Cursor loads ~/.cursor/rules only when the opened project is "
+    return ("Cursor loads %s only when the opened project is "
             "inside your home directory (resolved home: %s); projects "
             "elsewhere will not load it - use project scope (shared "
-            "AGENTS.md) for those" % home_base())
+            "AGENTS.md) for those"
+            % (home_disp(".cursor", "rules"), home_base()))
 
 
 # ---------------------------------------------------------------------------
@@ -1547,7 +1563,9 @@ def build_parser():
     p.add_argument("--mode", choices=["inline", "rules"],
                    default="rules",
                    help="user-scope Claude style: drop into the rules dir "
-                        "(default) or inline block in ~/.claude/CLAUDE.md")
+                        "(default) or inline block in %s"
+                        # argparse %-formats help text; escape the tag's %
+                        % home_disp(".claude", "CLAUDE.md").replace("%", "%%"))
     p.add_argument("--source", metavar="URL|PATH", default=None,
                    help="rules file source (default: bundled BEHAVE.md next "
                         "to install.py; falls back to fetching the "
@@ -2793,8 +2811,8 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
     def print_menu():
         print("Which Claude file? Official load order (higher = read "
               "earlier each session;")
-        print("managed policy and your ~/.claude%sCLAUDE.md come before all "
-              "of these):" % sep)
+        print("managed policy and your %s come before all of these):"
+              % home_disp(".claude", "CLAUDE.md"))
         for num, name, desc, path, var in entries:
             tag = "[exists]" if path.exists() else "[missing]"
             print("  (%s) %-18s - %-46s %s" % (num, name, desc, tag))
@@ -2830,8 +2848,8 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
             reader,
             ["Which Claude file? Official load order (higher = read "
              "earlier each session;",
-             "managed policy and your ~/.claude%sCLAUDE.md come before "
-             "all of these):" % sep],
+             "managed policy and your %s come before all of these):"
+             % home_disp(".claude", "CLAUDE.md")],
             rows,
             footer="",
             invalid_msg="  pick 1-4 (q quits)",
