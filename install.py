@@ -855,7 +855,7 @@ def claude_project_target(variant, project_dir):
 # never drift apart. Each row: id -> list of
 # (path, mode, drop_agent, agents served); multi-marker agents
 # (devin, zed) expand to every existing dir at call time.
-# claude-code is NOT here: its user target depends on --claude-mode,
+# claude-code is NOT here: its user target depends on --mode,
 # so it keeps an explicit branch in build_install_plan and scan
 # lists both of its files. Rows follow TIER1_ORDER.
 _USER_TARGETS: Dict[str, Any] = {
@@ -1194,7 +1194,7 @@ _USER_TARGETS: Dict[str, Any] = {
     "deepseek-harness": lambda: [(home_base() / ".dsh" / "AGENTS.md", "inline", None, ["deepseek-harness"])],
 }
 
-def build_install_plan(agents, scope, variant, claude_mode, project_dir):
+def build_install_plan(agents, scope, variant, mode, project_dir):
     """Returns (targets, notes)."""
     targets = []
     notes = []
@@ -1216,7 +1216,7 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir):
     if scope == "user":
         for a in agents:
             if a == "claude-code":
-                if claude_mode == "inline":
+                if mode == "inline":
                     targets.append(_mk_target(
                         ["claude-code"], claude_dir() / "CLAUDE.md", "inline"))
                 else:
@@ -1225,8 +1225,8 @@ def build_install_plan(agents, scope, variant, claude_mode, project_dir):
                         claude_dir() / "rules" / "behave.md", "drop",
                         drop_agent="claude-code"))
                 continue
-            for path, mode, drop_agent, ags in _USER_TARGETS[a]():
-                targets.append(_mk_target(ags, path, mode,
+            for path, target_mode, drop_agent, ags in _USER_TARGETS[a]():
+                targets.append(_mk_target(ags, path, target_mode,
                                           drop_agent=drop_agent))
         return targets, notes
 
@@ -1544,7 +1544,7 @@ def build_parser():
                    default=None,
                    help="project-scope Claude target file (default: rules; "
                         "--scope local implies local)")
-    p.add_argument("--claude-mode", choices=["inline", "rules"],
+    p.add_argument("--mode", choices=["inline", "rules"],
                    default="rules",
                    help="user-scope Claude style: drop into the rules dir "
                         "(default) or inline block in ~/.claude/CLAUDE.md")
@@ -1672,10 +1672,10 @@ def cmd_install(args):
         err("usage error: --scope local only supports --claude-variant local")
         return 1
     variant = args.claude_variant or ("local" if scope == "local" else "rules")
-    claude_mode = args.claude_mode or "rules"
+    mode = args.mode or "rules"
 
     targets, notes = build_install_plan(
-        agents, scope, variant, claude_mode, project_dir)
+        agents, scope, variant, mode, project_dir)
     for n in notes:
         say(n)
 
@@ -1753,7 +1753,10 @@ def cmd_remove(args):
     for f in findings:
         say("  %-40s (%s; %s)" % (str(f["path"]), f["agent"], f["mode"]))
     if not args.yes:
-        err("confirmation missing, pass --yes to remove")
+        # direct print, not err(): this one is a notice, not an "error: "
+        sys.stdout.flush()
+        print("Confirmation missing, pass --yes to remove",
+              file=sys.stderr, flush=True)
         return 5
     results = execute_removal(findings, args.block_id)
     if args.json:
@@ -2754,7 +2757,7 @@ def _tui_user(args, reader, source):
         print("nothing selected; nothing written")
         return 0
     targets, notes = build_install_plan(
-        chosen, "user", None, args.claude_mode or "rules", None)
+        chosen, "user", None, args.mode or "rules", None)
     for nt in notes:
         print(nt)
     if not targets:
@@ -2920,7 +2923,7 @@ def _tui_project_flagged(reader, source, requested, pre_variant, project_dir,
             return _BACK
     targets, notes = build_install_plan(
         requested, scope, pre_variant or "rules",
-        args.claude_mode or "rules", project_dir)
+        args.mode or "rules", project_dir)
     for nt in notes:
         print(nt)
     if not targets:

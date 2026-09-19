@@ -107,10 +107,10 @@ def test_14_variant_mode_resolution(run, env_for, fake_home, tmp_path,
         assert b"\n@" not in data
         assert not data.startswith(b"@")
 
-    run(["--agent", "claude-code", "--scope", "user", "--claude-mode",
+    run(["--agent", "claude-code", "--scope", "user", "--mode",
          "rules", "--yes", "--source", str(src_file)], env=env)
     assert (fake_home / ".claude" / "rules" / "behave.md").is_file()
-    run(["--agent", "claude-code", "--scope", "user", "--claude-mode",
+    run(["--agent", "claude-code", "--scope", "user", "--mode",
          "inline", "--yes", "--source", str(src_file)], env=env)
     assert (fake_home / ".claude" / "CLAUDE.md").read_bytes().startswith(B)
 

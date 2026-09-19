@@ -2,7 +2,7 @@
 
 FLAGS = [
     "--agent", "--all-detected", "--scope", "--claude-variant",
-    "--claude-mode", "--source", "--sha256", "--block-id",
+    "--mode", "--source", "--sha256", "--block-id",
     "--project-dir", "--copy-only", "--remove", "--interactive",
     "--ascii", "--list", "--json", "--yes", "--quiet", "--help",
 ]
