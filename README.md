@@ -229,29 +229,58 @@ For Claude Code at user scope the default is the drop file `~/.claude/rules/beha
 
 **Uninstalling:**  Use `python install.py --remove` -to list agents with already installed instructions (without actual removal), and combine it with `--yes` for actual removal. Optionally, use `--agent` / `--scope` to narrow the scan.
 
-The repo distributes `BEHAVE.md`. When copying manually into an agent, the filename matters: Claude Code expects `CLAUDE.md`, Gemini CLI expects `GEMINI.md`, most other tools expect `AGENTS.md`. The installer handles the naming automatically; user preferring the manual installation must rename the file on their own.
+For copying the file by hand, the next section shows exactly what to rename and where.
 
 Cross-agent bonus: Devin, VS Code GitHub Copilot, and OpenCode (with Oh My Open Agent plugin) also read `~/.claude/CLAUDE.md` and `~/.claude/rules/`, so a Claude Code install reaches those agents for free. Others, like Oh My Pi (omp) keep their own config root (`~/.omp/agent/AGENTS.md`) and do not read Claude Code global file by default, so the installer gives them a dedicated target.
 
-### Manual install (no Python)
+### Manual install
 
-Copy the file directly. Unlike the installer, this replaces the whole target file, so an existing `~/.claude/CLAUDE.md` is backed up to `CLAUDE.backup.md` before being overwritten. The result carries no installer markers: `--remove` cannot see or clean it, and a later installer run adds its marked block on top rather than adopting the file.
+`BEHAVE.md` is plain Markdown, so manual installation is just getting its content to wherever your agent reads instructions. Three ways to do it, from most to least permanent.
 
-**Windows (PowerShell):**
+#### 1. Copy the file, rename it, put it where your agent reads it
+
+Download `BEHAVE.md` from the repo (or copy its content into a new file), rename it to the name your agent expects, and place it user-wide (applies to all your projects) or project-wide (applies to one repository):
+
+| Agent | File name | User-wide location | Project-wide location |
+|---|---|---|---|
+| Claude Code | `CLAUDE.md` | `~/.claude/CLAUDE.md` | `CLAUDE.md` in repo root (or `.claude/rules/behave.md`) |
+| Codex | `AGENTS.md` | `~/.codex/AGENTS.md` | `AGENTS.md` in repo root |
+| OpenCode | `AGENTS.md` | `~/.config/opencode/AGENTS.md` | `AGENTS.md` in repo root |
+| Gemini CLI | `GEMINI.md` | `~/.gemini/GEMINI.md` | `GEMINI.md` in repo root |
+| Cursor | `AGENTS.md` | `~/.cursor/rules/behave.mdc` (add `alwaysApply: true` frontmatter) | `AGENTS.md` in repo root |
+| Most other agents | `AGENTS.md` | the agent's global config directory | `AGENTS.md` in repo root |
+
+User-wide example for Claude Code on Windows (PowerShell):
 
 ```powershell
-mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.backup.md" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md" -OutFile "$HOME\.claude\CLAUDE.md"
+mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.bkp" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md" -OutFile "$HOME\.claude\CLAUDE.md"
 ```
 
-**Linux / macOS:**
+User-wide example for Codex on Linux / macOS (same pattern for any `AGENTS.md` agent, just a different directory):
 
 ```bash
-mkdir -p ~/.claude; cp ~/.claude/CLAUDE.md ~/.claude/CLAUDE.backup.md 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o ~/.claude/CLAUDE.md
+mkdir -p ~/.codex; cp ~/.codex/AGENTS.md ~/.codex/AGENTS.bkp 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o ~/.codex/AGENTS.md
 ```
 
-~~If `~/.claude/CLAUDE.md` already exists, it is backed up to `CLAUDE.backup.md` before being overwritten.~~
+Project-wide is the same copy under the right name inside your repo, for example from the project root:
 
-Works natively with **Claude Code** and **OpenCode**. For other AI coding tools, follow that tool's instruction file convention (for example `AGENTS.md` or `GEMINI.md`). The content is the same; the filename depends on the tool. Prefer the installer even alongside a manual copy: it is idempotent, and only the files it writes are tracked by `--remove`.
+```bash
+cp AGENTS.md AGENTS.bkp 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o AGENTS.md
+```
+
+A file copy replaces the whole target file, so each command above saves an existing one as `<name>.bkp` first (silently skipped when there is nothing to back up). To merge with existing content instead, use the next option.
+
+#### 2. Inject the content into an existing instructions file
+
+If your `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md` already has content worth keeping, open it and paste the `BEHAVE.md` content in (at the top is a good default), then save. This merges behave with your existing rules instead of replacing them. Installer also does that but puts BEGIN/END marks so content can be later removed or updated.
+
+Alternatively, Claude Code users can put @BEHAVE.md (or @AGENTS.md - to load content from the file in the same directory) at the top of their existing CLAUDE.md and keep their CLAUDE.md clean. The reason why installer does not do it is because @ command is recognized only by Claude Code, and it would confuse some agents. Even cleaner is to drop BEHAVE.md into Claude rules directory where it is always loaded from (both user wide and project wide) - which is what installer offers.   
+
+#### 3. Paste it straight into a session
+
+Install nothing: copy the `BEHAVE.md` content and paste it into a new agent or chat session as your first message, or into the agent's custom-instructions field. The rules then apply to that session only. This is a good way to test before use.
+
+Manual installs carry no installer markers: `--remove` cannot see or clean them, and a later installer run adds its marked block on top rather than adopting the file. Prefer the installer when possible: it handles the per-agent file naming automatically, is idempotent, and only the files it writes are tracked by `--remove`.
 
 ## Related projects
 
