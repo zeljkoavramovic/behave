@@ -2804,7 +2804,7 @@ def _tui_pick_variant(reader, pre_variant, project_dir):
         ("3", "CLAUDE.local.md", "inline; loads last (final word); gitignored",
          project_dir / "CLAUDE.local.md", "local"),
         ("4", ".claude%srules%s" % (sep, sep),
-         "drop behave.md; same tier as 1/2; cleanest removal",
+         "drop BEHAVE.md; same tier as 1/2; cleanest removal",
          project_dir / ".claude" / "rules" / "behave.md", "rules"),
     ]
 
