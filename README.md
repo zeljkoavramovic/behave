@@ -295,7 +295,7 @@ Manual installs carry no installer markers: `--remove` cannot see or clean them,
 
 ## Support the project
 
-If this saved you time and frustration, or spared you a bad deployment, support is welcome:
+If this saved you time, frustration and helped your agent produce maintainable code, support is welcome:
 
 - ⭐ **Star the repository**
 - 💬 **Share the repository**
