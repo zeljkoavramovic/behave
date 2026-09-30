@@ -1,4 +1,4 @@
-# AI Behaving Instructions That Work
+# AI Behaving Instructions That Actually Work
 
 [![Website](https://img.shields.io/website?url=https%3A%2F%2Fzeljkoavramovic.github.io%2Fbehave%2F&label=landing%20page)](https://zeljkoavramovic.github.io/behave/)
 
@@ -6,7 +6,7 @@ One file. Zero dependencies. Discipline every AI coding session.
 
 ## Overview
 
-If you've made nice little projects with your AI coding agents but watched bigger ones collapse into unmaintainable code, **Behave** is for you. It installs a global or project-level instructions file that makes your agents behave and write maintainable code.
+If you've made nice little projects with your AI coding agents but watched bigger ones collapse into unmaintainable code, **[Behave](https://github.com/zeljkoavramovic/behave)** is for you. It installs a global or project-level instructions file that makes your agents behave and write maintainable code.
 
 The result: every coding session becomes more disciplined, more predictable, and more productive.
 
