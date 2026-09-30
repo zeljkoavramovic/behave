@@ -50,6 +50,7 @@ def _readme_roster(readme):
         tok = tok.strip()
         if tok.startswith("and "):
             tok = tok[len("and "):]
+        tok = tok.rstrip(".")  # tolerate a sentence-final period
         tokens.append(tok)
     return int(m.group(1)), tokens
 

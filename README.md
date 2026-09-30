@@ -6,17 +6,19 @@ One file. Zero dependencies. Discipline every AI coding session.
 
 ## Overview
 
-Instructions that make AI coding assistants actually behave, so every coding session becomes more disciplined, more predictable, and more productive.
+If you've made nice little projects with your AI coding agents but watched bigger ones collapse into unmaintainable code, **Behave** is for you. It installs a global or project-level instructions file that makes your agents behave and write maintainable code.
 
-The ideas come from **[Andrej Karpathy's](https://x.com/karpathy/status/2015883857489522876)** observations on LLM coding pitfalls (**[Multica adaptation](https://github.com/multica-ai/andrej-karpathy-skills)**) and from **[David Scott Bernstein's](https://github.com/ThePassionateProgrammer/knowledge-base-starter)** partnership-driven working-agreement style. Those ideas grew into something more systematic, tuned for real projects.
+The result: every coding session becomes more disciplined, more predictable, and more productive.
 
-Behave supports **Claude Code**, **Codex**, **Cursor**, **OpenCode**, **Kilo Code**, **Cline**, **Antigravity**, **Pi**, **DeepSeek Harness**, **ZCode**, **OpenClaw**, **Hermes**, and 40 other agents. The installer lets you choose from the list of auto-detected agents and asks whether you want a global install or a project-directory one. Depending on the kind of agent, the installer drops the behaving instructions file into the agent's rules directory or injects it into `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md`. No dependencies, one file, and simple uninstallation if needed.
+The ideas come from **[Andrej Karpathy's](https://x.com/karpathy/status/2015883857489522876)** observations on LLM coding pitfalls (**[Multica adaptation](https://github.com/multica-ai/andrej-karpathy-skills)**) and from **[David Scott Bernstein's](https://github.com/ThePassionateProgrammer/knowledge-base-starter)** partnership-driven working-agreement style. Those ideas grew into something more systematic, tuned and tested on real projects.
+
+**Behave** supports **Claude Code**, **Codex**, **Cursor**, **OpenCode**, **Kilo Code**, **Cline**, **Antigravity**, **Pi**, **DeepSeek Harness**, **ZCode**, **OpenClaw**, **Hermes**, and 40 other agents. The installer lets you choose from the list of auto-detected agents and asks whether you want a global install or a project-level one. Depending on the kind of agent, the installer drops the behaving instructions file into the agent's rules directory or injects it into `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md`. No dependencies, one file, and simple uninstallation when needed.
 
 A **[single-page walkthrough](https://zeljkoavramovic.github.io/behave/)** includes visual diagrams, side navigation, a before/after comparison, a feature comparison table, an FAQ, and one-click install commands.
 
 ## The problem it solves
 
-AI coding assistants, left unchecked, tend to:
+AI coding agents, left unchecked, tend to:
 
 - Start coding before clarifying ambiguous requirements
 - Add unrequested features, abstractions, and "improvements"
@@ -148,7 +150,7 @@ for safer, smaller, verifiable AI coding changes"]
     A --> C
 ```
 
-## How it differs from the originals
+## How it differs from its predecessors
 
 | Feature | Karpathy | Bernstein | This repo |
 |---|---|---|---|
@@ -213,7 +215,7 @@ The installer asks where the instructions should apply (to all of your projects 
 
 **Supported agents list (52):**
 
-Claude Code, Codex, OpenCode, Pi, Oh My Pi, Devin, Cursor, Gemini CLI, GitHub Copilot, Roo Code, Augment Code, Kilo Code, Droid, Deep Agents, Cline, Crush, Amp, Goose, Zed, OpenHands, Warp, Junie, Posit Assistant, ZCode, OpenClaw, Kimi Code, Qwen Code, Trae, Antigravity, Kiro, Qoder, Grok Build, Mistral Vibe, Rovo Dev, IBM Bob, Trae CN, Cortex Code, Antigravity CLI, Xum, Hermes Agent, AiderDesk, ForgeCode, Command Code, Qoder CN, Tabnine CLI, Codewhale, jcode, Codebuff, Kimchi, Pochi, Reasonix, and DeepSeek Harness
+Claude Code, Codex, OpenCode, Pi, Oh My Pi, Devin, Cursor, Gemini CLI, GitHub Copilot, Roo Code, Augment Code, Kilo Code, Droid, Deep Agents, Cline, Crush, Amp, Goose, Zed, OpenHands, Warp, Junie, Posit Assistant, ZCode, OpenClaw, Kimi Code, Qwen Code, Trae, Antigravity, Kiro, Qoder, Grok Build, Mistral Vibe, Rovo Dev, IBM Bob, Trae CN, Cortex Code, Antigravity CLI, Xum, Hermes Agent, AiderDesk, ForgeCode, Command Code, Qoder CN, Tabnine CLI, Codewhale, jcode, Codebuff, Kimchi, Pochi, Reasonix, and DeepSeek Harness.
 
 Run `python install.py --list` to see every agent it detects on your machine. For headless or CI use, see `python install.py --help`. In the agent picker, a checked row for an agent that already has the instructions installed shows `[X]` instead of `[x]` - the mark follows the checkbox as you toggle it, and re-running with that agent checked updates the existing install. Terminals without arrow-key support (or with piped input) get the same cue in the numbered fallback: an `(installed)` suffix on the row.
 
@@ -221,9 +223,9 @@ Run `python install.py --list` to see every agent it detects on your machine. Fo
 
 - **Inline mode**: a marked block (`<!-- BEGIN behave ... -->` down to `<!-- END behave -->`) at the TOP of the agent's memory file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and friends). Everything you already had survives below the block, and a re-run replaces only the block itself.
 - **Drop mode**: a standalone rules file the installer owns, placed in the agent's rules directory (for example `~/.claude/rules/behave.md`); removal deletes the file.
-- **Plain copy**: `--copy-only` writes a bare `BEHAVE.md` and touches nothing else (not tracked by `--remove`).
+- **Plain copy mode**: `--copy-only` writes a bare `BEHAVE.md` and touches nothing else (not tracked by `--remove`).
 
-For Claude Code at user scope, the default is the drop file `~/.claude/rules/behave.md`; manually pass `--mode inline` for a marked block inside `~/.claude/CLAUDE.md` instead, or choose the right destination using the installer.
+For Claude Code at global scope, the default is the drop mode which copies file to `~/.claude/rules/behave.md`. If you manually pass `--mode inline` then a marked block inside `~/.claude/CLAUDE.md` is injected instead. Or simply choose the right destination from the installer.
 
 **Updating**: Re-run the installer UI, or use `python install.py --all-detected --yes` to update instructions for every agent it detects on the machine. If you put your customized `BEHAVE.md` next to the installer, it will be used instead of the repo version.
 
@@ -231,7 +233,7 @@ For Claude Code at user scope, the default is the drop file `~/.claude/rules/beh
 
 For copying the file by hand, the next section shows exactly what to rename and where.
 
-Cross-agent bonus: Devin, VS Code GitHub Copilot, and OpenCode (with Oh My Open Agent plugin) also read `~/.claude/CLAUDE.md` and `~/.claude/rules/`, so a Claude Code install reaches those agents for free. Others, like Oh My Pi (omp), keep their own config root (`~/.omp/agent/AGENTS.md`) and do not read the Claude Code global file by default, so the installer gives them a dedicated target.
+**Cross-agent bonus:** Devin, VS Code GitHub Copilot, and OpenCode (with Oh My Open Agent plugin) also read `~/.claude/CLAUDE.md` and `~/.claude/rules/`, so a Claude Code install reaches those agents for free. Others, like Oh My Pi (omp), keep their own config root (`~/.omp/agent/AGENTS.md`) and do not read the Claude Code global file by default, so the installer gives them a dedicated target.
 
 ### Manual install
 
@@ -250,19 +252,19 @@ Download `BEHAVE.md` from the repo (or copy its contents into a new file), renam
 | Cursor | `AGENTS.md` | `~/.cursor/rules/behave.mdc` (add `alwaysApply: true` frontmatter) | `AGENTS.md` in repo root |
 | Most other agents | `AGENTS.md` | the agent's global config directory | `AGENTS.md` in repo root |
 
-User-wide example for Claude Code on Windows (PowerShell):
+Global user-wide example for Claude Code on Windows (PowerShell):
 
 ```powershell
 mkdir -Force "$HOME\.claude" > $null; cp "$HOME\.claude\CLAUDE.md" "$HOME\.claude\CLAUDE.bkp" 2>$null; iwr "https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md" -OutFile "$HOME\.claude\CLAUDE.md"
 ```
 
-User-wide example for Codex on Linux / macOS (same pattern for any `AGENTS.md` agent, just a different directory):
+Global user-wide example for Codex on Linux / macOS (same pattern for any `AGENTS.md` agent, just a different directory):
 
 ```bash
 mkdir -p ~/.codex; cp ~/.codex/AGENTS.md ~/.codex/AGENTS.bkp 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o ~/.codex/AGENTS.md
 ```
 
-Project-wide is the same copy under the right name inside your repo, for example from the project root:
+Local project-wide is the same copy under the right name inside your repo, for example from the project root:
 
 ```bash
 cp AGENTS.md AGENTS.bkp 2>/dev/null; curl -fsSL https://raw.githubusercontent.com/zeljkoavramovic/behave/master/BEHAVE.md -o AGENTS.md
@@ -272,7 +274,7 @@ A file copy replaces the whole target file, so each command above saves an exist
 
 #### 2. Inject the content into an existing instructions file
 
-If your `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md` already has content worth keeping, open it and paste in the `BEHAVE.md` contents (at the top is a good default), then save. This merges behave with your existing rules instead of replacing them. The installer also does that but puts BEGIN/END markers so the content can later be removed or updated.
+If your `CLAUDE.md`, `AGENTS.md`, or `GEMINI.md` already has content worth keeping, open it and paste in the `BEHAVE.md` contents (at the top is a good default because your instructions below would have priority), then save. This merges **Behave** with your existing rules instead of replacing them. The installer also does that but puts BEGIN/END markers so the content can later be removed or updated.
 
 Alternatively, Claude Code users can put @BEHAVE.md (or @AGENTS.md, to load content from a file in the same directory) at the top of their existing CLAUDE.md and keep their CLAUDE.md clean. The reason the installer does not do this is that the @ command is recognized only by Claude Code and would confuse some agents. Even cleaner is to drop BEHAVE.md into the Claude rules directory, where it is always loaded from (both user-wide and project-wide) - which is what the installer offers.
 
